@@ -67,10 +67,6 @@ class LLMClient:
             if settings.aws_secret_access_key:
                 import os
                 os.environ["AWS_SECRET_ACCESS_KEY"] = settings.aws_secret_access_key
-        
-        elif self.provider == "ollama":
-            # Ollama runs locally
-            litellm.api_base = settings.ollama_base_url
     
     def _format_model_name(self) -> str:
         """
