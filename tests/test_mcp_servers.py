@@ -9,11 +9,11 @@ from pathlib import Path
 
 # Add src to path (go up one level from tests/ to reach project root)
 project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root / "src"))
+sys.path.insert(0, str(project_root))
 
-from conference_agent.config import settings
-from conference_agent.logging import logger
-from conference_agent.mcp.client import build_mcp_clients
+from src.conference_agent.config import settings
+from src.conference_agent.logging import logger
+from src.conference_agent.mcp.client import build_mcp_clients
 
 
 async def test_mcp_servers():

@@ -8,9 +8,9 @@ from pathlib import Path
 
 # Add src to path (go up one level from tests/ to reach project root)
 project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root / "src"))
+sys.path.insert(0, str(project_root))
 
-from conference_agent.llm.client import LLMClient
+from src.conference_agent.llm.client import LLMClient
 
 
 async def test_completion():

@@ -11,6 +11,10 @@ from typing import Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Déterminer le chemin de la racine du projet
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+_ENV_FILE = _PROJECT_ROOT / ".env"
+
 
 class Settings(BaseSettings):
     """
@@ -20,7 +24,7 @@ class Settings(BaseSettings):
     """
     
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -32,7 +36,7 @@ class Settings(BaseSettings):
         description="LLM provider to use"
     )
     llm_model: str = Field(
-        default="gemini-pro",
+        default="ministral-3:8b",
         description="Model name/ID to use"
     )
     llm_temperature: float = Field(

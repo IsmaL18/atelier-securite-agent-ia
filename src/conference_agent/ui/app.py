@@ -6,16 +6,17 @@ with detailed visibility into the agent's reasoning process and tool usage.
 """
 
 import asyncio
+import atexit
 from typing import Any
 
 import streamlit as st
 
-from conference_agent.agent.core import create_agent
-from conference_agent.agent.prompts import get_greeting_message
-from conference_agent.config import settings
-from conference_agent.llm.client import create_llm_client
-from conference_agent.logging import logger, setup_logger
-from conference_agent.mcp.client import build_mcp_clients
+from src.conference_agent.agent.core import create_agent
+from src.conference_agent.agent.prompts import get_greeting_message
+from src.conference_agent.config import settings
+from src.conference_agent.llm.client import create_llm_client
+from src.conference_agent.logging import logger, setup_logger
+from src.conference_agent.mcp.client import build_mcp_clients
 
 
 # Page configuration
@@ -57,9 +58,10 @@ async def initialize_agent() -> None:
             # Create LLM client
             st.session_state.llm_client = create_llm_client()
             
-            # Create MCP clients
-            st.session_state.mcp_clients = await build_mcp_clients()
-            await st.session_state.mcp_clients.connect()
+            # Create MCP clients and connect using async with pattern
+            # We use __aenter__() to manually enter the context
+            mcp_clients = await build_mcp_clients()
+            st.session_state.mcp_clients = await mcp_clients.__aenter__()
             
             # Create agent
             st.session_state.agent = await create_agent(
@@ -143,25 +145,46 @@ async def handle_user_input(user_input: str) -> None:
     Args:
         user_input: User's message
     """
-    # Display user message
-    with st.chat_message("user", avatar="👤"):
-        st.markdown(user_input)
-    
     # Get agent response
-    with st.chat_message("assistant", avatar="🤖"):
-        with st.spinner("Réflexion en cours..."):
-            try:
-                response, updated_history = await st.session_state.agent.run_with_history(
-                    user_input,
-                    st.session_state.conversation_history,
-                )
-                
-                st.markdown(response)
-                st.session_state.conversation_history = updated_history
+    with st.spinner("Réflexion en cours..."):
+        try:
+            response, updated_history = await st.session_state.agent.run_with_history(
+                user_input,
+                st.session_state.conversation_history,
+            )
             
+            logger.info(f"Response received: {response[:100]}...")
+            logger.info(f"History length: {len(updated_history)}")
+            
+            # Update history BEFORE rerun
+            st.session_state.conversation_history = updated_history
+            
+        except Exception as e:
+            st.error(f"Erreur: {e}")
+            logger.error(f"Error handling user input: {e}", exc_info=True)
+
+
+async def cleanup() -> None:
+    """Cleanup resources on application exit."""
+    if st.session_state.get("mcp_clients"):
+        try:
+            # Use __aexit__() to properly close the context
+            await st.session_state.mcp_clients.__aexit__(None, None, None)
+            logger.info("Cleanup completed")
+        except Exception as e:
+            logger.debug(f"Cleanup error (can be ignored): {e}")
+
+
+def register_cleanup() -> None:
+    """Register cleanup handler to run on exit."""
+    def cleanup_wrapper():
+        if st.session_state.get("mcp_clients"):
+            try:
+                asyncio.run(cleanup())
             except Exception as e:
-                st.error(f"Erreur: {e}")
-                logger.error(f"Error handling user input: {e}")
+                logger.debug(f"Exit cleanup error: {e}")
+    
+    atexit.register(cleanup_wrapper)
 
 
 def main() -> None:
@@ -175,6 +198,8 @@ def main() -> None:
     # Initialize agent (async)
     if not st.session_state.initialized:
         asyncio.run(initialize_agent())
+        # Register cleanup handler after initialization
+        register_cleanup()
     
     # Display sidebar configuration
     display_configuration_sidebar()

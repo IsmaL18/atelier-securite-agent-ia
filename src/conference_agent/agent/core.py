@@ -11,10 +11,10 @@ from typing import Annotated, Any, TypedDict
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 
-from conference_agent.agent.prompts import get_system_prompt
-from conference_agent.llm.client import LLMClient
-from conference_agent.logging import logger
-from conference_agent.mcp.client import MCPClients
+from src.conference_agent.agent.prompts import get_system_prompt
+from src.conference_agent.llm.client import LLMClient
+from src.conference_agent.logging import logger
+from src.conference_agent.mcp.client import MCPClients
 
 
 class AgentState(TypedDict):
@@ -114,7 +114,7 @@ class ConferenceAgent:
         messages = state["messages"]
         
         # Ensure system message is present
-        if not messages or messages[0].get("role") != "system":
+        if not messages or messages[0].type != "system":
             messages = [
                 {"role": "system", "content": get_system_prompt()},
                 *messages,
@@ -283,10 +283,17 @@ class ConferenceAgent:
         
         # Find the last assistant message
         for message in reversed(messages):
-            if message.get("role") == "assistant" and message.get("content"):
-                response = message["content"]
-                logger.info(f"Agent response: {response}")
-                return response
+            # Handle both dict and Message object formats
+            if isinstance(message, dict):
+                if message.get("role") == "assistant" and message.get("content"):
+                    response = message["content"]
+                    logger.info(f"Agent response: {response}")
+                    return response
+            elif hasattr(message, "type") and hasattr(message, "content"):
+                if message.type == "ai" and message.content:
+                    response = message.content
+                    logger.info(f"Agent response: {response}")
+                    return response
         
         return "Je n'ai pas pu générer une réponse. Veuillez réessayer."
     
@@ -328,9 +335,15 @@ class ConferenceAgent:
         # Find the last assistant message
         response = "Je n'ai pas pu générer une réponse. Veuillez réessayer."
         for message in reversed(final_messages):
-            if message.get("role") == "assistant" and message.get("content"):
-                response = message["content"]
-                break
+            # Handle both dict and Message object formats
+            if isinstance(message, dict):
+                if message.get("role") == "assistant" and message.get("content"):
+                    response = message["content"]
+                    break
+            elif hasattr(message, "type") and hasattr(message, "content"):
+                if message.type == "ai" and message.content:
+                    response = message.content
+                    break
         
         logger.info(f"Agent response: {response}")
         

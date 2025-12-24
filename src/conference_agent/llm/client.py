@@ -10,8 +10,8 @@ from typing import Any
 
 import litellm
 
-from conference_agent.config import settings
-from conference_agent.logging import logger
+from src.conference_agent.config import settings
+from src.conference_agent.logging import logger
 
 
 class LLMClient:
@@ -88,6 +88,60 @@ class LLMClient:
         
         return self.model
     
+    def _format_messages(self, messages: list) -> list[dict[str, Any]]:
+        """
+        Convert messages to dictionary format for LiteLLM.
+        
+        Handles both LangGraph Message objects and plain dictionaries.
+        
+        Args:
+            messages: List of messages (can be Message objects or dicts)
+            
+        Returns:
+            List of message dictionaries
+        """
+        formatted = []
+        
+        for msg in messages:
+            # If it's already a dict, use it
+            if isinstance(msg, dict):
+                formatted.append(msg)
+            # If it's a LangGraph Message object
+            elif hasattr(msg, "type") and hasattr(msg, "content"):
+                # Map LangGraph message types to OpenAI roles
+                role_mapping = {
+                    "system": "system",
+                    "human": "user",
+                    "ai": "assistant",
+                    "tool": "tool",
+                }
+                
+                role = role_mapping.get(msg.type, "user")
+                message_dict = {
+                    "role": role,
+                    "content": msg.content or "",
+                }
+                
+                # Handle tool call information if present
+                if hasattr(msg, "tool_calls") and msg.tool_calls:
+                    message_dict["tool_calls"] = msg.tool_calls
+                
+                # Handle tool call ID for tool messages
+                if hasattr(msg, "tool_call_id") and msg.tool_call_id:
+                    message_dict["tool_call_id"] = msg.tool_call_id
+                
+                # Handle name for tool messages
+                if hasattr(msg, "name") and msg.name:
+                    message_dict["name"] = msg.name
+                
+                formatted.append(message_dict)
+            else:
+                # Fallback: convert to string
+                logger.warning(f"Unknown message format: {type(msg)}, converting to user message")
+                formatted.append({"role": "✓ LLM response received ({tokens_used} tokens)"})
+        
+        return formatted
+    
     async def call(
         self,
         messages: list[dict[str, str]],
@@ -107,15 +161,18 @@ class LLMClient:
         """
         model_name = self._format_model_name()
         
+        # Convert LangGraph Message objects to dictionaries if needed
+        formatted_messages = self._format_messages(messages)
+        
         # Calculate approximate prompt length for logging
-        prompt_length = sum(len(msg.get("content", "")) for msg in messages)
+        prompt_length = sum(len(str(msg.get("content", ""))) for msg in formatted_messages)
         logger.info(f"🤖 LLM call: {model_name} (prompt length: {prompt_length} chars)")
         
         try:
             # Prepare LiteLLM call parameters
             call_params: dict[str, Any] = {
                 "model": model_name,
-                "messages": messages,
+                "messages": formatted_messages,
                 "temperature": self.temperature,
                 "max_tokens": self.max_tokens,
             }
@@ -136,9 +193,9 @@ class LLMClient:
                 tokens_used = response.usage.total_tokens
             
             if tokens_used:
-                logger.info(f"LLM response received ({tokens_used} tokens)")
+                logger.info(f"✓ LLM response received ({tokens_used} tokens)")
             else:
-                logger.info("LLM response received")
+                logger.info("✓ LLM response received")
             
             # Parse and return response
             return self._parse_response(response)
@@ -233,13 +290,10 @@ class LLMClient:
         """
         model_name = self._format_model_name()
         
-        prompt_length = sum(len(msg.get("content", "")) for msg in messages)
-        logger.info(f"🤖 LLM call: {model_name} (prompt length: {prompt_length} chars)")
-        
         try:
             call_params: dict[str, Any] = {
                 "model": model_name,
-                "messages": messages,
+                "messages": formatted_messages,
                 "temperature": self.temperature,
                 "max_tokens": self.max_tokens,
             }
