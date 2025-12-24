@@ -51,10 +51,9 @@ class MCPClients:
         self.filesystem_session: ClientSession | None = None
         self.gmail_session: ClientSession | None = None
         
-        self._filesystem_read = None
-        self._filesystem_write = None
-        self._gmail_read = None
-        self._gmail_write = None
+        # Store context managers  
+        self._filesystem_ctx = None
+        self._gmail_ctx = None
         
         logger.info("MCP Clients initialized")
     
@@ -68,52 +67,53 @@ class MCPClients:
         await self.disconnect()
     
     async def connect(self) -> None:
-        """
-        Connect to both MCP servers.
-        
-        Establishes stdio connections to filesystem and Gmail servers.
-        """
+        """Connect to both MCP servers."""
         logger.info("Connecting to MCP servers...")
         
         try:
             # Connect to filesystem server
-            self._filesystem_read, self._filesystem_write = await stdio_client(self.filesystem_params).__aenter__()
-            self.filesystem_session = ClientSession(self._filesystem_read, self._filesystem_write)
+            logger.info("Starting filesystem server...")
+            self._filesystem_ctx = stdio_client(self.filesystem_params)
+            fs_read, fs_write = await self._filesystem_ctx.__aenter__()
+            self.filesystem_session = ClientSession(fs_read, fs_write)
             await self.filesystem_session.__aenter__()
             await self.filesystem_session.initialize()
-            logger.info("MCP Filesystem server started successfully")
+            logger.info("✓ Filesystem server connected")
             
             # Connect to Gmail server
-            self._gmail_read, self._gmail_write = await stdio_client(self.gmail_params).__aenter__()
-            self.gmail_session = ClientSession(self._gmail_read, self._gmail_write)
+            logger.info("Starting Gmail server...")
+            self._gmail_ctx = stdio_client(self.gmail_params)
+            gmail_read, gmail_write = await self._gmail_ctx.__aenter__()
+            self.gmail_session = ClientSession(gmail_read, gmail_write)
             await self.gmail_session.__aenter__()
             await self.gmail_session.initialize()
-            logger.info("MCP Gmail server started successfully")
-            
+            logger.info("✓ Gmail server connected")
         except Exception as e:
             logger.error(f"Failed to connect to MCP servers: {e}")
             await self.disconnect()
             raise
     
     async def disconnect(self) -> None:
-        """
-        Disconnect from MCP servers.
-        
-        Cleans up all connections and resources.
-        """
+        """Disconnect from MCP servers - simple cleanup."""
         logger.info("Disconnecting from MCP servers...")
         
-        if self.filesystem_session:
-            try:
-                await self.filesystem_session.__aexit__(None, None, None)
-            except Exception as e:
-                logger.error(f"Error disconnecting filesystem session: {e}")
+        # Just close the sessions, let Python cleanup the rest
+        errors = []
         
-        if self.gmail_session:
-            try:
-                await self.gmail_session.__aexit__(None, None, None)
-            except Exception as e:
-                logger.error(f"Error disconnecting Gmail session: {e}")
+        for name, session in [("Gmail", self.gmail_session), ("Filesystem", self.filesystem_session)]:
+            if session:
+                try:
+                    await session.__aexit__(None, None, None)
+                except Exception as e:
+                    errors.append(f"{name}: {e}")
+        
+        # Don't try to manually close contexts - causes cancel scope issues
+        # The context managers will cleanup automatically
+        
+        if errors:
+            logger.debug(f"Minor cleanup warnings: {errors}")
+        else:
+            logger.info("Disconnected cleanly")
         
         logger.info("Disconnected from MCP servers")
     

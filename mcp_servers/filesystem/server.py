@@ -1,18 +1,23 @@
 """
 Filesystem MCP server implementation.
 
-This module implements an MCP server that provides access to conference files
-using the official MCP library.
+Simple MCP server that provides access to conference files.
 """
 
 import asyncio
 import json
+import sys
 from pathlib import Path
 
-import openpyxl
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+try:
+    import openpyxl
+    from mcp.server import Server
+    from mcp.server.stdio import stdio_server
+    from mcp.types import Tool, TextContent
+except ImportError as e:
+    print(f"Error importing dependencies: {e}", file=sys.stderr)
+    print("Please install: pip install mcp openpyxl", file=sys.stderr)
+    sys.exit(1)
 
 
 # Data directory containing conference files

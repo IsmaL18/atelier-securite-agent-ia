@@ -1,17 +1,22 @@
 """
 Gmail MCP server implementation.
 
-This module implements an MCP server that provides Gmail functionality
-using the official MCP library. For the workshop, this uses mock data.
+Simple MCP server that provides Gmail functionality using mock data.
 """
 
 import asyncio
 import json
+import sys
 from datetime import datetime
 
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+try:
+    from mcp.server import Server
+    from mcp.server.stdio import stdio_server
+    from mcp.types import Tool, TextContent
+except ImportError as e:
+    print(f"Error importing dependencies: {e}", file=sys.stderr)
+    print("Please install: pip install mcp", file=sys.stderr)
+    sys.exit(1)
 
 
 # Create MCP server instance

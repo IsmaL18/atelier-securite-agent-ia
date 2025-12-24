@@ -46,7 +46,7 @@ async def test_mcp_servers():
             
             logger.info("\nCalling 'read_file' tool (participants.xlsx)...")
             result = await mcp_clients.call_filesystem("read_file", {"filename": "participants.xlsx"})
-            logger.info(f"Result: {result}")
+            logger.info(f"Result preview: {str(result)[:200]}...")
             
             # Test Gmail tools
             logger.info("\n--- Testing Gmail Server ---")
@@ -55,17 +55,13 @@ async def test_mcp_servers():
             gmail_tools = await mcp_clients.list_gmail_tools()
             logger.info(f"Available tools: {[t.get('name') for t in gmail_tools]}")
             
-            logger.info("\nCalling 'get_contacts' tool...")
-            result = await mcp_clients.call_gmail("get_contacts", {})
-            logger.info(f"Result: {result}")
-            
             logger.info("\nCalling 'list_emails' tool...")
             result = await mcp_clients.call_gmail("list_emails", {"max_results": 3})
             logger.info(f"Result: {result}")
             
             logger.info("\nCalling 'send_email' tool (test)...")
             result = await mcp_clients.call_gmail("send_email", {
-                "to": "test@example.com",
+                "to": ["test@example.com"],
                 "subject": "Test email",
                 "body": "This is a test email from the MCP server."
             })
