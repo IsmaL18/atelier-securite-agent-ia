@@ -145,23 +145,31 @@ async def handle_user_input(user_input: str) -> None:
     Args:
         user_input: User's message
     """
+    # Display user message immediately
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(user_input)
+    
     # Get agent response
-    with st.spinner("Réflexion en cours..."):
-        try:
-            response, updated_history = await st.session_state.agent.run_with_history(
-                user_input,
-                st.session_state.conversation_history,
-            )
-            
-            logger.info(f"Response received: {response[:100]}...")
-            logger.info(f"History length: {len(updated_history)}")
-            
-            # Update history BEFORE rerun
-            st.session_state.conversation_history = updated_history
-            
-        except Exception as e:
-            st.error(f"Erreur: {e}")
-            logger.error(f"Error handling user input: {e}", exc_info=True)
+    with st.chat_message("assistant", avatar="🤖"):
+        with st.spinner("Génération de la réponse..."):
+            try:
+                response, updated_history = await st.session_state.agent.run_with_history(
+                    user_input,
+                    st.session_state.conversation_history,
+                )
+                
+                logger.info(f"Response received: {response[:100]}...")
+                logger.info(f"History length: {len(updated_history)}")
+                
+                # Display the response
+                st.markdown(response)
+                
+                # Update history AFTER displaying
+                st.session_state.conversation_history = updated_history
+                
+            except Exception as e:
+                st.error(f"Erreur: {e}")
+                logger.error(f"Error handling user input: {e}", exc_info=True)
 
 
 async def cleanup() -> None:

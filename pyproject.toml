@@ -7,6 +7,7 @@ requires-python = ">=3.12.5"
 dependencies = [
     "chainlit>=2.9.3",
     "colorlog>=6.10.1",
+    "google-cloud-aiplatform>=1.38",
     "langgraph>=1.0.5",
     "litellm>=1.80.11",
     "mcp>=1.25.0",

@@ -8,6 +8,7 @@ the LLM and MCP tools using LangGraph for state management.
 import json
 from typing import Annotated, Any, TypedDict
 
+from langchain_core.messages import ToolMessage
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 
@@ -127,6 +128,17 @@ class ConferenceAgent:
             tool_choice="auto",
         )
         
+        # Debug: log the response structure
+        logger.debug(f"LLM response keys: {response.keys()}")
+        content = response.get('content') or ''
+        logger.debug(f"LLM response content: {content[:200]}")
+        if "tool_calls" in response:
+            logger.info(f"LLM returned {len(response['tool_calls'])} tool call(s)")
+            for tc in response["tool_calls"]:
+                func = tc.get('function') or {}
+                logger.info(f"  - Tool: {func.get('name', 'unknown')}")
+                logger.debug(f"  - Full tool call: {tc}")
+        
         # Add LLM response to messages
         new_message = {
             "role": response["role"],
@@ -154,39 +166,59 @@ class ConferenceAgent:
         
         tool_results = []
         
+        # Get tool calls from either dict or LangChain Message object
+        tool_calls = []
+        if isinstance(last_message, dict):
+            tool_calls = last_message.get("tool_calls", [])
+        elif hasattr(last_message, "tool_calls"):
+            tool_calls = last_message.tool_calls or []
+        
         # Execute each tool call
-        if "tool_calls" in last_message:
-            for tool_call in last_message["tool_calls"]:
-                tool_name = tool_call["function"]["name"]
-                tool_args_str = tool_call["function"]["arguments"]
-                
-                # Parse arguments
-                try:
-                    if isinstance(tool_args_str, str):
-                        tool_args = json.loads(tool_args_str)
-                    else:
-                        tool_args = tool_args_str
-                except json.JSONDecodeError:
-                    tool_args = {}
-                
-                logger.info(f"🔧 Tool call: {tool_name}")
-                logger.debug(f"   Parameters: {tool_args}")
-                
-                # Route to appropriate MCP client
-                result = await self._execute_tool(tool_name, tool_args)
-                
-                status = "SUCCESS" if result.get("success", False) else "FAIL"
-                logger.info(f"{status} Tool result: {tool_name}")
-                logger.debug(f"   Result: {result}")
-                
-                # Format tool result for LLM
-                tool_result_message = {
-                    "role": "tool",
-                    "tool_call_id": tool_call["id"],
-                    "name": tool_name,
-                    "content": json.dumps(result, ensure_ascii=False),
-                }
-                tool_results.append(tool_result_message)
+        for tool_call in tool_calls:
+            # Handle both dict format and LangChain ToolCall format
+            if isinstance(tool_call, dict):
+                if "function" in tool_call:
+                    # OpenAI format
+                    tool_name = tool_call["function"]["name"]
+                    tool_args_str = tool_call["function"]["arguments"]
+                    tool_call_id = tool_call["id"]
+                else:
+                    # LangChain format
+                    tool_name = tool_call.get("name", "")
+                    tool_args_str = tool_call.get("args", {})
+                    tool_call_id = tool_call.get("id", "")
+            else:
+                # LangChain ToolCall object
+                tool_name = tool_call.name
+                tool_args_str = tool_call.args
+                tool_call_id = tool_call.id
+            
+            # Parse arguments
+            try:
+                if isinstance(tool_args_str, str):
+                    tool_args = json.loads(tool_args_str)
+                else:
+                    tool_args = tool_args_str
+            except json.JSONDecodeError:
+                tool_args = {}
+            
+            logger.info(f"🔧 Tool call: {tool_name}")
+            logger.debug(f"   Parameters: {tool_args}")
+            
+            # Route to appropriate MCP client
+            result = await self._execute_tool(tool_name, tool_args)
+            
+            status = "SUCCESS" if result.get("success", False) else "FAIL"
+            logger.info(f"{status} Tool result: {tool_name}")
+            logger.debug(f"   Result: {result}")
+            
+            # Format tool result for LLM using LangChain ToolMessage
+            tool_result_message = ToolMessage(
+                content=json.dumps(result, ensure_ascii=False),
+                tool_call_id=tool_call_id,
+                name=tool_name,
+            )
+            tool_results.append(tool_result_message)
         
         # Increment tool calls counter
         new_tool_calls_made = state.get("tool_calls_made", 0) + len(tool_results)
@@ -247,7 +279,15 @@ class ConferenceAgent:
             return "end"
         
         # If the last message has tool calls, continue
-        if "tool_calls" in last_message:
+        # Handle both dict and LangChain Message object formats
+        has_tool_calls = False
+        if isinstance(last_message, dict):
+            has_tool_calls = bool(last_message.get("tool_calls"))
+        elif hasattr(last_message, "tool_calls"):
+            has_tool_calls = bool(last_message.tool_calls)
+        
+        if has_tool_calls:
+            logger.info("Tool calls detected, continuing to tools node")
             return "continue"
         
         # Otherwise, we're done
@@ -283,17 +323,25 @@ class ConferenceAgent:
         
         # Find the last assistant message
         for message in reversed(messages):
-            # Handle both dict and Message object formats
+            logger.debug(f"Checking message: {type(message)} - {message}")
+            
+            # Handle dict format
             if isinstance(message, dict):
                 if message.get("role") == "assistant" and message.get("content"):
                     response = message["content"]
                     logger.info(f"Agent response: {response}")
                     return response
-            elif hasattr(message, "type") and hasattr(message, "content"):
-                if message.type == "ai" and message.content:
-                    response = message.content
-                    logger.info(f"Agent response: {response}")
-                    return response
+            # Handle LangGraph Message objects (AIMessage, HumanMessage, etc.)
+            elif hasattr(message, "content"):
+                # Check for AIMessage by class name or type attribute
+                message_type = getattr(message, "type", None)
+                class_name = message.__class__.__name__
+                
+                if class_name == "AIMessage" or message_type == "ai":
+                    if message.content:
+                        response = message.content
+                        logger.info(f"Agent response: {response}")
+                        return response
         
         return "Je n'ai pas pu générer une réponse. Veuillez réessayer."
     
@@ -335,15 +383,23 @@ class ConferenceAgent:
         # Find the last assistant message
         response = "Je n'ai pas pu générer une réponse. Veuillez réessayer."
         for message in reversed(final_messages):
-            # Handle both dict and Message object formats
+            logger.debug(f"Checking message: {type(message)} - {message}")
+            
+            # Handle dict format
             if isinstance(message, dict):
                 if message.get("role") == "assistant" and message.get("content"):
                     response = message["content"]
                     break
-            elif hasattr(message, "type") and hasattr(message, "content"):
-                if message.type == "ai" and message.content:
-                    response = message.content
-                    break
+            # Handle LangGraph Message objects (AIMessage, HumanMessage, etc.)
+            elif hasattr(message, "content"):
+                # Check for AIMessage by class name or type attribute
+                message_type = getattr(message, "type", None)
+                class_name = message.__class__.__name__
+                
+                if class_name == "AIMessage" or message_type == "ai":
+                    if message.content:
+                        response = message.content
+                        break
         
         logger.info(f"Agent response: {response}")
         

@@ -75,18 +75,34 @@ class LLMClient:
         Returns:
             Properly formatted model name with provider prefix
         """
-        # LiteLLM requires provider prefixes for some models
+        model = self.model
+
+        # LiteLLM requires provider prefixes for some models.
+        # Normalize common user-provided prefixes to avoid constructing invalid model IDs.
         if self.provider == "vertex_ai":
-            if not self.model.startswith("vertex_ai/"):
-                return f"vertex_ai/{self.model}"
-        elif self.provider == "bedrock":
-            if not self.model.startswith("bedrock/"):
-                return f"bedrock/{self.model}"
-        elif self.provider == "ollama":
-            if not self.model.startswith("ollama/"):
-                return f"ollama/{self.model}"
-        
-        return self.model
+            if model.startswith("vertex_ai/"):
+                return model
+
+            # Users sometimes provide Google/AI Studio style model IDs.
+            # For Vertex AI, LiteLLM expects: vertex_ai/<model> (e.g. vertex_ai/gemini-2.0-flash)
+            if model.startswith("google/"):
+                model = model.removeprefix("google/")
+            if model.startswith("gemini/"):
+                model = model.removeprefix("gemini/")
+
+            return f"vertex_ai/{model}"
+
+        if self.provider == "bedrock":
+            if not model.startswith("bedrock/"):
+                return f"bedrock/{model}"
+            return model
+
+        if self.provider == "ollama":
+            if not model.startswith("ollama/"):
+                return f"ollama/{model}"
+            return model
+
+        return model
     
     def _format_messages(self, messages: list) -> list[dict[str, Any]]:
         """
@@ -105,7 +121,11 @@ class LLMClient:
         for msg in messages:
             # If it's already a dict, use it
             if isinstance(msg, dict):
-                formatted.append(msg)
+                message_dict = dict(msg)  # Make a copy to avoid mutating original
+                # Ensure tool_calls are in the correct format for LiteLLM
+                if "tool_calls" in message_dict and message_dict["tool_calls"]:
+                    message_dict["tool_calls"] = self._format_tool_calls(message_dict["tool_calls"])
+                formatted.append(message_dict)
             # If it's a LangGraph Message object
             elif hasattr(msg, "type") and hasattr(msg, "content"):
                 # Map LangGraph message types to OpenAI roles
@@ -124,7 +144,7 @@ class LLMClient:
                 
                 # Handle tool call information if present
                 if hasattr(msg, "tool_calls") and msg.tool_calls:
-                    message_dict["tool_calls"] = msg.tool_calls
+                    message_dict["tool_calls"] = self._format_tool_calls(msg.tool_calls)
                 
                 # Handle tool call ID for tool messages
                 if hasattr(msg, "tool_call_id") and msg.tool_call_id:
@@ -138,7 +158,74 @@ class LLMClient:
             else:
                 # Fallback: convert to string
                 logger.warning(f"Unknown message format: {type(msg)}, converting to user message")
-                formatted.append({"role": "✓ LLM response received ({tokens_used} tokens)"})
+                formatted.append({"role": "user", "content": str(msg)})
+        
+        return formatted
+    
+    def _format_tool_calls(self, tool_calls: list) -> list[dict[str, Any]]:
+        """
+        Normalize *tool call instances* into the OpenAI-compatible format expected by LiteLLM.
+
+        This method is about the *calls* the assistant has already decided to make
+        (i.e., data found in messages under the `tool_calls` field). It converts
+        different representations (dicts, LangChain/LangGraph tool call objects)
+        into a single canonical structure:
+
+        - `{"id": "...", "type": "function", "function": {"name": "...", "arguments": "{...}"}}`
+
+        This is used when preparing the message history to send to the LLM.
+
+        Args:
+            tool_calls: A list of tool call instances in various formats.
+
+        Returns:
+            A list of tool call dicts in OpenAI-compatible format (arguments as a JSON string).
+        """
+        formatted = []
+        
+        for tc in tool_calls:
+            if isinstance(tc, dict):
+                # Already a dict, ensure it has the right structure
+                if "function" in tc:
+                    # Already in OpenAI format
+                    formatted.append({
+                        "id": tc.get("id", ""),
+                        "type": tc.get("type", "function"),
+                        "function": {
+                            "name": tc["function"].get("name", ""),
+                            "arguments": tc["function"].get("arguments", "{}"),
+                        },
+                    })
+                elif "name" in tc:
+                    # LangChain format, convert to OpenAI format
+                    args = tc.get("args", {})
+                    if isinstance(args, dict):
+                        args = json.dumps(args)
+                    formatted.append({
+                        "id": tc.get("id", ""),
+                        "type": "function",
+                        "function": {
+                            "name": tc["name"],
+                            "arguments": args,
+                        },
+                    })
+                else:
+                    logger.warning(f"Unknown tool_call dict format: {tc}")
+            elif hasattr(tc, "name"):
+                # LangChain ToolCall object
+                args = tc.args if hasattr(tc, "args") else {}
+                if isinstance(args, dict):
+                    args = json.dumps(args)
+                formatted.append({
+                    "id": tc.id if hasattr(tc, "id") else "",
+                    "type": "function",
+                    "function": {
+                        "name": tc.name,
+                        "arguments": args,
+                    },
+                })
+            else:
+                logger.warning(f"Unknown tool_call format: {type(tc)}")
         
         return formatted
     
@@ -206,25 +293,85 @@ class LLMClient:
     
     def _format_tools_for_litellm(self, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
-        Convert our MCP tool format to OpenAI function calling format.
-        
+        Convert *tool definitions* (capabilities) into the OpenAI function-calling schema.
+
+        This method is about declaring which tools are available to the model.
+        It takes MCP tool definitions (name/description/input_schema) and converts
+        them into the OpenAI/LiteLLM `tools=[...]` format.
+
+        Notes:
+            - This is separate from `_format_tool_calls`, which formats *actual calls*.
+            - For Vertex AI, LiteLLM may transform empty parameter schemas into `{}`.
+              Vertex rejects `{}` for `parameters`, so tools with no parameters omit
+              the `parameters` field entirely.
+
         Args:
-            tools: List of MCP tool definitions
-            
+            tools: A list of MCP tool definitions with `name`, `description`, and `input_schema`.
+
         Returns:
-            List of OpenAI-formatted tool definitions
+            A list of OpenAI-formatted tool definitions suitable for passing to LiteLLM.
         """
         formatted_tools = []
         
         for tool in tools:
-            formatted_tool = {
-                "type": "function",
-                "function": {
-                    "name": tool["name"],
-                    "description": tool["description"],
-                    "parameters": tool.get("input_schema", {}),
-                },
-            }
+            input_schema = tool.get("input_schema")
+
+            # Vertex AI requires functionDeclaration.parameters to be a JSON schema of type OBJECT.
+            # LiteLLM strips empty schemas to {}, which Vertex AI rejects.
+            # For tools with no parameters, we omit the parameters field entirely.
+            
+            has_properties = (
+                input_schema 
+                and isinstance(input_schema, dict) 
+                and input_schema.get("properties")
+            )
+            
+            if has_properties:
+                # Make a deep copy to avoid mutating original
+                input_schema = json.loads(json.dumps(input_schema))
+                
+                # Ensure type is "object"
+                if input_schema.get("type") != "object":
+                    input_schema["type"] = "object"
+                
+                # Ensure required exists (Vertex AI needs this)
+                if "required" not in input_schema:
+                    input_schema["required"] = []
+                
+                # Clean properties for Vertex AI compatibility
+                # Vertex AI only supports: type, description, enum, items, properties, required
+                # Remove unsupported fields like "default"
+                cleaned_properties = {}
+                for prop_name, prop_schema in input_schema.get("properties", {}).items():
+                    if isinstance(prop_schema, dict):
+                        cleaned_prop = {}
+                        for key in ["type", "description", "enum", "items", "properties", "required"]:
+                            if key in prop_schema:
+                                cleaned_prop[key] = prop_schema[key]
+                        cleaned_properties[prop_name] = cleaned_prop
+                    else:
+                        cleaned_properties[prop_name] = prop_schema
+                input_schema["properties"] = cleaned_properties
+
+                formatted_tool = {
+                    "type": "function",
+                    "function": {
+                        "name": tool["name"],
+                        "description": tool["description"],
+                        "parameters": input_schema,
+                    },
+                }
+            else:
+                # No parameters - omit the parameters field entirely for Vertex AI compatibility
+                formatted_tool = {
+                    "type": "function",
+                    "function": {
+                        "name": tool["name"],
+                        "description": tool["description"],
+                    },
+                }
+            
+            logger.debug(f"Formatted tool '{tool['name']}': {json.dumps(formatted_tool, indent=2)}")
             formatted_tools.append(formatted_tool)
         
         return formatted_tools
@@ -289,6 +436,8 @@ class LLMClient:
             LLM response dictionary
         """
         model_name = self._format_model_name()
+
+        formatted_messages = self._format_messages(messages)
         
         try:
             call_params: dict[str, Any] = {

@@ -14,9 +14,9 @@ from src.conference_agent.llm.client import LLMClient
 
 
 async def test_completion():
-    """Test de completion simple avec Ollama ministral-3:8b."""
+    """Test de completion simple."""
     print("=" * 60)
-    print("Test LLMClient avec Ollama ministral-3:8b")
+    print("Test LLMClient")
     print("=" * 60)
     
     # Créer le client

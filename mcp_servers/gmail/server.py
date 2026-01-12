@@ -64,6 +64,7 @@ async def list_tools() -> list[Tool]:
                         "default": 10,
                     },
                 },
+                "required": [],
             },
         ),
         Tool(

@@ -42,6 +42,7 @@ async def list_tools() -> list[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {},
+                "required": [],
             },
         ),
         Tool(
