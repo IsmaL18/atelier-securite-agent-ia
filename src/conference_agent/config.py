@@ -31,12 +31,12 @@ class Settings(BaseSettings):
     )
     
     # LLM Configuration
-    llm_provider: Literal["openai", "vertex_ai", "bedrock", "ollama"] = Field(
-        default="ollama",
+    llm_provider: Literal["vertex_ai", "ollama"] = Field(
+        default="vertex_ai",
         description="LLM provider to use"
     )
     llm_model: str = Field(
-        default="ministral-3:8b",
+        default="gemini-2.0-flash-exp",
         description="Model name/ID to use"
     )
     llm_temperature: float = Field(
@@ -49,6 +49,12 @@ class Settings(BaseSettings):
         default=2048,
         ge=1,
         description="Maximum tokens for LLM responses"
+    )
+
+    # Ollama Configuration
+    ollama_base_url: str | None = Field(
+        default="http://127.0.0.1:11434/v1",
+        description="Ollama API base URL"
     )
     
     # Google Cloud / Vertex AI
@@ -65,71 +71,11 @@ class Settings(BaseSettings):
         description="GCP region"
     )
     
-    # AWS Configuration
-    aws_access_key_id: str | None = Field(
-        default=None,
-        description="AWS access key ID"
-    )
-    aws_secret_access_key: str | None = Field(
-        default=None,
-        description="AWS secret access key"
-    )
-    aws_region: str = Field(
-        default="us-east-1",
-        description="AWS region"
-    )
-    
-    # MCP Servers Configuration
-    mcp_filesystem_command: str = Field(
-        default="python",
-        description="Command to run filesystem MCP server"
-    )
-    mcp_filesystem_args: str = Field(
-        default="mcp_servers/filesystem/server.py",
-        description="Arguments for filesystem MCP server (comma-separated)"
-    )
-    mcp_gmail_command: str = Field(
-        default="python",
-        description="Command to run Gmail MCP server"
-    )
-    mcp_gmail_args: str = Field(
-        default="mcp_servers/gmail/server.py",
-        description="Arguments for Gmail MCP server (comma-separated)"
-    )
-    
-    # Gmail API Configuration
-    gmail_credentials_path: str | None = Field(
-        default=None,
-        description="Path to Gmail API credentials JSON"
-    )
-    gmail_token_path: str | None = Field(
-        default=None,
-        description="Path to Gmail API token JSON"
-    )
-    
     # Application Settings
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO",
         description="Logging level"
     )
-    
-    def get_filesystem_args_list(self) -> list[str]:
-        """
-        Convert filesystem args string to list.
-        
-        Returns:
-            List of arguments for filesystem MCP server
-        """
-        return [arg.strip() for arg in self.mcp_filesystem_args.split(",") if arg.strip()]
-    
-    def get_gmail_args_list(self) -> list[str]:
-        """
-        Convert Gmail args string to list.
-        
-        Returns:
-            List of arguments for Gmail MCP server
-        """
-        return [arg.strip() for arg in self.mcp_gmail_args.split(",") if arg.strip()]
     
     @property
     def project_root(self) -> Path:
@@ -139,17 +85,17 @@ class Settings(BaseSettings):
         Returns:
             Path to project root
         """
-        return Path(__file__).parent.parent.parent.parent
+        return Path(__file__).parent.parent.parent
     
     @property
     def data_dir(self) -> Path:
         """
         Get the data directory path.
-        
+
         Returns:
             Path to data directory
         """
-        return self.project_root / "mcp_servers" / "filesystem" / "data"
+        return self.project_root / "data"
 
 
 # Create global settings instance

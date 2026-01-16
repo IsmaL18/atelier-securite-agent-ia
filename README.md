@@ -13,8 +13,7 @@ Cet atelier gamifié permet aux participants de "hacker" un agent IA pour décou
 ### Stack Technique
 
 - **LLM**: LiteLLM (support multi-providers: Vertex AI, AWS Bedrock, OpenAI, Ollama)
-- **Framework Agent**: LangGraph
-- **MCP Protocol**: Librairie officielle `mcp` pour les serveurs et clients
+- **Framework Agent**: PydanticAI
 - **UI**: Streamlit
 - **Configuration**: Pydantic Settings
 
@@ -30,24 +29,31 @@ Cet atelier gamifié permet aux participants de "hacker" un agent IA pour décou
    ```bash
    # Créer un environnement virtuel
    uv venv .venv
-   
+
    # Activer le venv
    source .venv/bin/activate  # Sur macOS/Linux
    # ou
    .venv\Scripts\activate  # Sur Windows
-   
+
    # Installer les dépendances
    uv sync
    ```
 
-3. **Créer le .env et le remplir en fonction de votre porvider de llm (AWS, GCP, Ollama)**
+3. **Créer le .env et le remplir en fonction de votre provider de llm**
+   ```
+   LLM_PROVIDER=vertex_ai  # ou openai, bedrock, ollama
+   LLM_MODEL=google/gemini-2.0-flash-exp
+   LLM_TEMPERATURE=0.7
+   LLM_MAX_TOKENS=2048
+   ```
 
+4. **Lancer l'application**
+   ```bash
+   python scripts/run_agent.py
+   ```
 
 ## Tests
 Des fichiers .py sont mis à disposition dans le dossier tests/ pour tester les différentes parties du projet.
-
-## Utilisation et lancement du projet
-...
 
 
 ## Scénario de l'Atelier

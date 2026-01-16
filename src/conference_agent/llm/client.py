@@ -45,7 +45,7 @@ class LLMClient:
         # Configure LiteLLM based on provider
         self._configure_litellm()
         
-        logger.info(f"LLM Client initialized: {self.provider}/{self.model}")
+        logger.info(f"LLM: LLM Client initialized: {self.provider}/{self.model}")
     
     def _configure_litellm(self) -> None:
         """Configure LiteLLM with provider-specific settings."""
@@ -253,7 +253,7 @@ class LLMClient:
         
         # Calculate approximate prompt length for logging
         prompt_length = sum(len(str(msg.get("content", ""))) for msg in formatted_messages)
-        logger.info(f"🤖 LLM call: {model_name} (prompt length: {prompt_length} chars)")
+        logger.debug(f"LLM: LLM call: {model_name} (prompt length: {prompt_length} chars)")
         
         try:
             # Prepare LiteLLM call parameters
@@ -280,9 +280,9 @@ class LLMClient:
                 tokens_used = response.usage.total_tokens
             
             if tokens_used:
-                logger.info(f"✓ LLM response received ({tokens_used} tokens)")
+                logger.debug(f"LLM: LLM response received ({tokens_used} tokens)")
             else:
-                logger.info("✓ LLM response received")
+                logger.debug("LLM: LLM response received")
             
             # Parse and return response
             return self._parse_response(response)
@@ -371,7 +371,7 @@ class LLMClient:
                     },
                 }
             
-            logger.debug(f"Formatted tool '{tool['name']}': {json.dumps(formatted_tool, indent=2)}")
+            logger.debug(f"TOOL: Formatted tool '{tool['name']}': {json.dumps(formatted_tool, indent=2)}")
             formatted_tools.append(formatted_tool)
         
         return formatted_tools
@@ -459,9 +459,9 @@ class LLMClient:
                 tokens_used = response.usage.total_tokens
             
             if tokens_used:
-                logger.info(f"LLM response received ({tokens_used} tokens)")
+                logger.debug(f"LLM: LLM response received ({tokens_used} tokens)")
             else:
-                logger.info("LLM response received")
+                logger.debug("LLM: LLM response received")
             
             return self._parse_response(response)
         

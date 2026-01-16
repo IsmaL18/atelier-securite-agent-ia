@@ -6,17 +6,13 @@ with detailed visibility into the agent's reasoning process and tool usage.
 """
 
 import asyncio
-import atexit
-from typing import Any
 
 import streamlit as st
 
-from src.conference_agent.agent.core import create_agent
+from src.conference_agent.agent.core import create_conference_agent, run_agent
 from src.conference_agent.agent.prompts import get_greeting_message
 from src.conference_agent.config import settings
-from src.conference_agent.llm.client import create_llm_client
 from src.conference_agent.logging import logger, setup_logger
-from src.conference_agent.mcp.client import build_mcp_clients
 
 
 # Page configuration
@@ -31,16 +27,13 @@ def init_session_state() -> None:
     """Initialize Streamlit session state variables."""
     if "conversation_history" not in st.session_state:
         st.session_state.conversation_history = []
-    
+
     if "agent" not in st.session_state:
         st.session_state.agent = None
-    
-    if "mcp_clients" not in st.session_state:
-        st.session_state.mcp_clients = None
-    
-    if "llm_client" not in st.session_state:
-        st.session_state.llm_client = None
-    
+
+    if "deps" not in st.session_state:
+        st.session_state.deps = None
+
     if "initialized" not in st.session_state:
         st.session_state.initialized = False
 
@@ -49,29 +42,22 @@ async def initialize_agent() -> None:
     """Initialize the agent and its dependencies."""
     if st.session_state.initialized:
         return
-    
+
     try:
         with st.spinner("Initialisation de l'agent..."):
             # Setup logger
             setup_logger(level=settings.log_level)
-            
-            # Create LLM client
-            st.session_state.llm_client = create_llm_client()
-            
-            # Create MCP clients and connect using async with pattern
-            # We use __aenter__() to manually enter the context
-            mcp_clients = await build_mcp_clients()
-            st.session_state.mcp_clients = await mcp_clients.__aenter__()
-            
-            # Create agent
-            st.session_state.agent = await create_agent(
-                st.session_state.llm_client,
-                st.session_state.mcp_clients,
+
+            # Create PydanticAI agent
+            agent, deps = create_conference_agent(
+                data_dir=settings.data_dir,
             )
-            
+
+            st.session_state.agent = agent
+            st.session_state.deps = deps
             st.session_state.initialized = True
-            logger.info("Agent initialized successfully")
-    
+            logger.info("AGENT: Agent initialized successfully")
+
     except Exception as e:
         st.error(f"Erreur lors de l'initialisation: {e}")
         logger.error(f"Initialization failed: {e}")
@@ -93,27 +79,34 @@ def display_header() -> None:
 def display_configuration_sidebar() -> None:
     """Display configuration options in the sidebar."""
     st.sidebar.title("⚙️ Configuration")
-    
+
     st.sidebar.markdown(f"""
-    **LLM Provider**: `{settings.llm_provider}`  
-    **Model**: `{settings.llm_model}`  
-    **Temperature**: `{settings.llm_temperature}`  
+    **LLM Provider**: `{settings.llm_provider}`
+    **Model**: `{settings.llm_model}`
+    **Temperature**: `{settings.llm_temperature}`
     """)
-    
+
     st.sidebar.divider()
-    
+
     st.sidebar.title("🔧 Outils disponibles")
-    
-    if st.session_state.agent and st.session_state.agent.tools:
-        for tool in st.session_state.agent.tools:
+
+    # PydanticAI agent stores tools differently
+    if st.session_state.agent:
+        tools_info = [
+            {"name": "list_conference_files", "description": "Liste les fichiers de données de la conférence"},
+            {"name": "read_conference_file", "description": "Lit le contenu d'un fichier de conférence"},
+            {"name": "list_emails", "description": "Liste les emails de la boîte de réception"},
+            {"name": "send_email", "description": "Envoie un email aux destinataires"},
+            {"name": "read_email", "description": "Lit un email complet par son ID"},
+        ]
+        for tool in tools_info:
             with st.sidebar.expander(f"📌 {tool['name']}"):
                 st.markdown(f"**Description**: {tool['description']}")
-                st.json(tool.get('input_schema', {}))
     else:
         st.sidebar.info("Aucun outil chargé")
-    
+
     st.sidebar.divider()
-    
+
     # Clear conversation button
     if st.sidebar.button("🗑️ Effacer la conversation"):
         st.session_state.conversation_history = []
@@ -141,83 +134,61 @@ def display_chat_history() -> None:
 async def handle_user_input(user_input: str) -> None:
     """
     Handle user input and get agent response.
-    
+
     Args:
         user_input: User's message
     """
-    # Display user message immediately
+    # Display user message
     with st.chat_message("user", avatar="👤"):
         st.markdown(user_input)
-    
+
     # Get agent response
     with st.chat_message("assistant", avatar="🤖"):
         with st.spinner("Génération de la réponse..."):
             try:
-                response, updated_history = await st.session_state.agent.run_with_history(
-                    user_input,
-                    st.session_state.conversation_history,
+                response = await run_agent(
+                    agent=st.session_state.agent,
+                    deps=st.session_state.deps,
+                    user_message=user_input,
                 )
-                
-                logger.info(f"Response received: {response[:100]}...")
-                logger.info(f"History length: {len(updated_history)}")
-                
-                # Display the response
+
+                # Display response
                 st.markdown(response)
-                
-                # Update history AFTER displaying
-                st.session_state.conversation_history = updated_history
-                
+
+                # Update history
+                st.session_state.conversation_history.append(
+                    {"role": "user", "content": user_input}
+                )
+                st.session_state.conversation_history.append(
+                    {"role": "assistant", "content": response}
+                )
+
             except Exception as e:
                 st.error(f"Erreur: {e}")
                 logger.error(f"Error handling user input: {e}", exc_info=True)
-
-
-async def cleanup() -> None:
-    """Cleanup resources on application exit."""
-    if st.session_state.get("mcp_clients"):
-        try:
-            # Use __aexit__() to properly close the context
-            await st.session_state.mcp_clients.__aexit__(None, None, None)
-            logger.info("Cleanup completed")
-        except Exception as e:
-            logger.debug(f"Cleanup error (can be ignored): {e}")
-
-
-def register_cleanup() -> None:
-    """Register cleanup handler to run on exit."""
-    def cleanup_wrapper():
-        if st.session_state.get("mcp_clients"):
-            try:
-                asyncio.run(cleanup())
-            except Exception as e:
-                logger.debug(f"Exit cleanup error: {e}")
-    
-    atexit.register(cleanup_wrapper)
 
 
 def main() -> None:
     """Main application entry point."""
     # Initialize session state
     init_session_state()
-    
+
     # Display header
     display_header()
-    
+
     # Initialize agent (async)
     if not st.session_state.initialized:
         asyncio.run(initialize_agent())
-        # Register cleanup handler after initialization
-        register_cleanup()
-    
+
     # Display sidebar configuration
     display_configuration_sidebar()
-    
+
     # Display chat history
     display_chat_history()
-    
+
     # Chat input
     user_input = st.chat_input("Posez votre question...")
-    
+
     if user_input:
         asyncio.run(handle_user_input(user_input))
         st.rerun()
