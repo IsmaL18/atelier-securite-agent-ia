@@ -20,6 +20,7 @@ class AgentDependencies:
     mock_inbox: list[dict] = field(default_factory=list)
     user_verified: bool = False
     verified_user_name: str = ""
+    level_4_validation: bool = False
 
     def __post_init__(self):
         """Initialize mock inbox with default emails."""
