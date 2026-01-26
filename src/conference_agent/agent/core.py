@@ -19,7 +19,7 @@ from src.conference_agent.agent.dependencies import AgentDependencies
 from src.conference_agent.agent.prompts import get_system_prompt
 from src.conference_agent.agent.tools import (
     verify_user,
-    list_conference_files,
+    list_available_files_and_folders,
     read_conference_file,
     list_emails,
     send_email,
@@ -60,7 +60,7 @@ def create_conference_agent(
 
     # Register tools (verify_user must be first as it's required before others)
     agent.tool(verify_user)
-    agent.tool(list_conference_files)
+    agent.tool(list_available_files_and_folders)
     agent.tool(read_conference_file)
     agent.tool(list_emails)
     agent.tool(send_email)
