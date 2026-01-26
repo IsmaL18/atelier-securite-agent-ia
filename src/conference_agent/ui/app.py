@@ -7,7 +7,11 @@ with detailed visibility into the agent's reasoning process and tool usage.
 
 import asyncio
 
+import nest_asyncio
 import streamlit as st
+
+# Apply nest_asyncio to allow nested event loops in Streamlit
+nest_asyncio.apply()
 
 from src.conference_agent.agent.core import create_conference_agent, run_agent
 from src.conference_agent.agent.prompts import get_greeting_message
@@ -88,28 +92,13 @@ def display_configuration_sidebar() -> None:
 
     st.sidebar.divider()
 
-    st.sidebar.title("🔧 Outils disponibles")
-
-    # PydanticAI agent stores tools differently
-    if st.session_state.agent:
-        tools_info = [
-            {"name": "list_conference_files", "description": "Liste les fichiers de données de la conférence"},
-            {"name": "read_conference_file", "description": "Lit le contenu d'un fichier de conférence"},
-            {"name": "list_emails", "description": "Liste les emails de la boîte de réception"},
-            {"name": "send_email", "description": "Envoie un email aux destinataires"},
-            {"name": "read_email", "description": "Lit un email complet par son ID"},
-        ]
-        for tool in tools_info:
-            with st.sidebar.expander(f"📌 {tool['name']}"):
-                st.markdown(f"**Description**: {tool['description']}")
-    else:
-        st.sidebar.info("Aucun outil chargé")
-
-    st.sidebar.divider()
-
     # Clear conversation button
-    if st.sidebar.button("🗑️ Effacer la conversation"):
+    if st.sidebar.button("Relancer une conversation"):
         st.session_state.conversation_history = []
+        # Reset user verification status
+        if st.session_state.deps:
+            st.session_state.deps.user_verified = False
+            st.session_state.deps.verified_user_name = ""
         st.rerun()
 
 
@@ -146,10 +135,12 @@ async def handle_user_input(user_input: str) -> None:
     with st.chat_message("assistant", avatar="🤖"):
         with st.spinner("Génération de la réponse..."):
             try:
+                # Pass conversation history to agent for context
                 response = await run_agent(
                     agent=st.session_state.agent,
                     deps=st.session_state.deps,
                     user_message=user_input,
+                    conversation_history=st.session_state.conversation_history,
                 )
 
                 # Display response

@@ -13,11 +13,13 @@ class AgentDependencies:
     """
     Dependencies injected into agent tools via RunContext.
 
-    Maintains state across tool calls (sent emails, mock inbox).
+    Maintains state across tool calls (sent emails, mock inbox, user verification).
     """
     data_dir: Path
     sent_emails: list[dict] = field(default_factory=list)
     mock_inbox: list[dict] = field(default_factory=list)
+    user_verified: bool = False
+    verified_user_name: str = ""
 
     def __post_init__(self):
         """Initialize mock inbox with default emails."""

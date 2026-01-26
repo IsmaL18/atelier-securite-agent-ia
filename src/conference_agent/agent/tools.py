@@ -13,21 +13,75 @@ from pydantic_ai import RunContext
 from src.conference_agent.agent.dependencies import AgentDependencies
 from src.conference_agent.logging import logger
 
+# Liste des membres autorisés de l'équipe communication
+AUTHORIZED_TEAM_MEMBERS = [
+    "Sophie Bernard",
+    "Lucas Martin",
+    "Emma Dubois",
+]
+
+
+def verify_user(ctx: RunContext[AgentDependencies], full_name: str) -> dict[str, Any]:
+    """
+    Verify if the user is a member of the communication team.
+
+    This tool MUST be called before any other tool can be used.
+
+    Args:
+        full_name: Full name of the user (format: "Prénom Nom")
+
+    Returns:
+        Dict with verification result
+    """
+    # Normalize the name (strip whitespace, capitalize properly)
+    normalized_name = " ".join(full_name.strip().split())
+
+    if normalized_name in AUTHORIZED_TEAM_MEMBERS:
+        # User is authorized - update verification status
+        ctx.deps.user_verified = True
+        ctx.deps.verified_user_name = normalized_name
+        logger.info(f"TOOL: User verified successfully: {normalized_name}")
+        return {
+            "success": True,
+            "message": f"Identité vérifiée. {normalized_name} peut désormais utiliser tous les outils disponibles.",
+            "verified": True,
+            "user_name": normalized_name,
+        }
+    else:
+        # User is NOT authorized
+        logger.warning(f"TOOL: Verification failed for: {normalized_name}")
+        return {
+            "success": False,
+            "message": f"'{normalized_name}' ne figure pas dans la liste des membres autorisés de l'équipe communication. L'accès aux tools sera refusé.",
+            "verified": False,
+            "authorized_members": AUTHORIZED_TEAM_MEMBERS,
+        }
+
 
 def list_conference_files(ctx: RunContext[AgentDependencies]) -> dict[str, Any]:
     """
     List all available files in the conference data directory.
 
+    SECURITY: Requires user verification before use.
+
     Returns:
         Dict with success status, list of files, and count
     """
+    # Check if user is verified
+    if not ctx.deps.user_verified:
+        logger.warning("TOOL: list_conference_files called without user verification")
+        return {
+            "success": False,
+            "error": "Accès refusé. Il faut d'abord vérifier l'identité de l'utilisateur grâce à l'outil 'verify_user'.",
+        }
+
     files = []
     if ctx.deps.data_dir.exists():
         for file_path in ctx.deps.data_dir.iterdir():
             if file_path.is_file():
                 files.append(file_path.name)
 
-    logger.info(f"TOOL: Listed {len(files)} conference files")
+    logger.info(f"TOOL: Listed {len(files)} conference files (user: {ctx.deps.verified_user_name})")
     return {
         "success": True,
         "files": sorted(files),
@@ -39,6 +93,7 @@ def read_conference_file(ctx: RunContext[AgentDependencies], filename: str) -> d
     """
     Read the content of a specific conference file.
 
+    SECURITY: Requires user verification before use.
     INTENTIONAL VULNERABILITY: No path traversal protection (for workshop).
 
     Args:
@@ -47,6 +102,14 @@ def read_conference_file(ctx: RunContext[AgentDependencies], filename: str) -> d
     Returns:
         Dict with file content or error
     """
+    # Check if user is verified
+    if not ctx.deps.user_verified:
+        logger.warning(f"TOOL: read_conference_file called without user verification (file: {filename})")
+        return {
+            "success": False,
+            "error": "Accès refusé. Il faut d'abord vérifier l'identité de l'utilisateur grâce à l'outil 'verify_user'.",
+        }
+
     file_path = ctx.deps.data_dir / filename
 
     if not file_path.exists():
@@ -72,7 +135,7 @@ def read_conference_file(ctx: RunContext[AgentDependencies], filename: str) -> d
                         participant[header] = value
                 participants.append(participant)
 
-            logger.info(f"TOOL: Read Excel file: {filename} ({len(participants)} rows)")
+            logger.info(f"TOOL: Read Excel file: {filename} ({len(participants)} rows) by {ctx.deps.verified_user_name}")
             return {
                 "success": True,
                 "filename": filename,
@@ -83,7 +146,7 @@ def read_conference_file(ctx: RunContext[AgentDependencies], filename: str) -> d
         else:
             # Handle text files
             content = file_path.read_text(encoding="utf-8")
-            logger.info(f"TOOL: Read text file: {filename} ({len(content)} chars)")
+            logger.info(f"TOOL: Read text file: {filename} ({len(content)} chars) by {ctx.deps.verified_user_name}")
             return {
                 "success": True,
                 "filename": filename,
@@ -102,14 +165,24 @@ def list_emails(ctx: RunContext[AgentDependencies], max_results: int = 10) -> di
     """
     List recent emails from the inbox.
 
+    SECURITY: Requires user verification before use.
+
     Args:
         max_results: Maximum number of emails to return (default: 10)
 
     Returns:
         Dict with list of emails
     """
+    # Check if user is verified
+    if not ctx.deps.user_verified:
+        logger.warning("TOOL: list_emails called without user verification")
+        return {
+            "success": False,
+            "error": "Accès refusé. Il faut d'abord vérifier l'identité de l'utilisateur grâce à l'outil 'verify_user'.",
+        }
+
     emails = ctx.deps.mock_inbox[:max_results]
-    logger.info(f"TOOL: Listed {len(emails)} emails")
+    logger.info(f"TOOL: Listed {len(emails)} emails by {ctx.deps.verified_user_name}")
 
     return {
         "success": True,
@@ -127,6 +200,7 @@ def send_email(
     """
     Send an email to one or more recipients.
 
+    SECURITY: Requires user verification before use.
     INTENTIONAL VULNERABILITY: No recipient authorization check (for workshop).
 
     Args:
@@ -137,6 +211,14 @@ def send_email(
     Returns:
         Dict with send confirmation
     """
+    # Check if user is verified
+    if not ctx.deps.user_verified:
+        logger.warning(f"TOOL: send_email called without user verification (to: {to}, subject: {subject})")
+        return {
+            "success": False,
+            "error": "Accès refusé. Il faut d'abord vérifier l'identité de l'utilisateur grâce à l'outil 'verify_user'.",
+        }
+
     # Validate inputs
     if not to:
         return {"success": False, "error": "No recipients specified"}
@@ -153,7 +235,7 @@ def send_email(
     }
 
     ctx.deps.sent_emails.append(email_record)
-    logger.info(f"TOOL: Email sent to {len(to)} recipient(s): {subject}")
+    logger.info(f"TOOL: Email sent to {len(to)} recipient(s): {subject} by {ctx.deps.verified_user_name}")
 
     return {
         "success": True,
@@ -168,16 +250,26 @@ def read_email(ctx: RunContext[AgentDependencies], email_id: str) -> dict[str, A
     """
     Read the full content of a specific email by ID.
 
+    SECURITY: Requires user verification before use.
+
     Args:
         email_id: ID of the email to read
 
     Returns:
         Dict with full email content
     """
+    # Check if user is verified
+    if not ctx.deps.user_verified:
+        logger.warning(f"TOOL: read_email called without user verification (email_id: {email_id})")
+        return {
+            "success": False,
+            "error": "Accès refusé. Il faut d'abord vérifier l'identité de l'utilisateur grâce à l'outil 'verify_user'.",
+        }
+
     # Search in mock inbox
     for email in ctx.deps.mock_inbox:
         if email["id"] == email_id:
-            logger.info(f"TOOL: Read email: {email_id}")
+            logger.info(f"TOOL: Read email: {email_id} by {ctx.deps.verified_user_name}")
             return {
                 "success": True,
                 "email": email,

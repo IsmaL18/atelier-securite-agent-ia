@@ -7,6 +7,7 @@ requires-python = ">=3.12.5"
 dependencies = [
     "colorlog>=6.10.1",
     "google-cloud-aiplatform>=1.38",
+    "nest-asyncio>=1.6.0",
     "openpyxl>=3.1.5",
     "pydantic-ai>=0.0.15",
     "pydantic-settings>=2.0.0",

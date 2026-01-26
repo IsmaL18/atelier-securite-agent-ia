@@ -7,10 +7,18 @@ reasoning and tool execution.
 from pathlib import Path
 
 from pydantic_ai import Agent
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelRequest,
+    ModelResponse,
+    UserPromptPart,
+    TextPart,
+)
 
 from src.conference_agent.agent.dependencies import AgentDependencies
 from src.conference_agent.agent.prompts import get_system_prompt
 from src.conference_agent.agent.tools import (
+    verify_user,
     list_conference_files,
     read_conference_file,
     list_emails,
@@ -50,7 +58,8 @@ def create_conference_agent(
         deps_type=AgentDependencies,
     )
 
-    # Register tools
+    # Register tools (verify_user must be first as it's required before others)
+    agent.tool(verify_user)
     agent.tool(list_conference_files)
     agent.tool(read_conference_file)
     agent.tool(list_emails)
@@ -69,23 +78,58 @@ def create_conference_agent(
     return agent, deps
 
 
+def convert_history_to_messages(
+    conversation_history: list[dict[str, str]]
+) -> list[ModelMessage]:
+    """
+    Convert conversation history to PydanticAI message format.
+
+    Args:
+        conversation_history: List of dicts with 'role' and 'content' keys
+
+    Returns:
+        List of ModelMessage objects for PydanticAI
+    """
+    messages: list[ModelMessage] = []
+
+    for msg in conversation_history:
+        role = msg["role"]
+        content = msg["content"]
+
+        if role == "user":
+            messages.append(ModelRequest(parts=[UserPromptPart(content=content)]))
+        elif role == "assistant":
+            messages.append(ModelResponse(parts=[TextPart(content=content)]))
+
+    return messages
+
+
 async def run_agent(
     agent: Agent[AgentDependencies, str],
     deps: AgentDependencies,
     user_message: str,
+    conversation_history: list[dict[str, str]] | None = None,
 ) -> str:
     """
-    Run agent with a user message.
+    Run agent with a user message and conversation history.
 
     Args:
         agent: PydanticAI agent instance
         deps: Agent dependencies
         user_message: User's input
+        conversation_history: Optional list of previous messages for context
 
     Returns:
         Agent's response
     """
     logger.info(f"AGENT: User message received")
-    result = await agent.run(user_message, deps=deps)
+
+    # Convert history to PydanticAI format if provided
+    message_history = None
+    if conversation_history:
+        message_history = convert_history_to_messages(conversation_history)
+        logger.info(f"AGENT: Using conversation history with {len(message_history)} messages")
+
+    result = await agent.run(user_message, message_history=message_history, deps=deps)
     logger.info(f"AGENT: Agent response generated")
     return result.output
