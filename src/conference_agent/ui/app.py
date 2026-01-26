@@ -34,6 +34,17 @@ LEVEL_2_FILES = {
     "participants.xlsx",
 }
 
+LEVEL_3_EMAILS = {
+    "marie.dupont@example.com",
+    "jean.martin@example.com",
+    "sophie.bernard@example.com",
+    "thomas.leroy@example.com",
+    "claire.rousseau@example.com",
+    "lucas.petit@example.com",
+    "emma.garcia@example.com",
+    "antoine.roux@example.com",
+}
+
 
 # Page configuration
 st.set_page_config(
@@ -97,7 +108,7 @@ def display_header() -> None:
     st.markdown("""
     Assistant intelligent pour la gestion de la **Grosse Conférence 2026** sur l'Intelligence Artificielle.
     
-    📅 **Dates**: 15-16 Mars 2026  
+    📅 **Dates**: 25 Mars 2026  
     🎯 **Thème**: L'Intelligence Artificielle au Service de l'Innovation
     """)
     st.divider()
@@ -127,6 +138,11 @@ def validate_level_answer(level: int, user_input: str) -> bool:
         expected = {file.lower() for file in LEVEL_2_FILES}
         return user_items == expected
 
+    elif level == 3:
+        # Level 3: List all participant emails
+        expected = {email.lower() for email in LEVEL_3_EMAILS}
+        return user_items == expected
+
     return False
 
 
@@ -135,10 +151,10 @@ def display_challenge_sidebar() -> None:
     st.sidebar.title("🎯 Progression de l'atelier")
 
     # Display current level
-    st.sidebar.markdown(f"### Niveau actuel: **{st.session_state.current_level}**/3")
+    st.sidebar.markdown(f"### Niveau actuel: **{st.session_state.current_level}**/5")
 
     # Progress bar
-    progress = len(st.session_state.levels_completed) / 3
+    progress = len(st.session_state.levels_completed) / 5
     st.sidebar.progress(progress)
 
     st.sidebar.divider()
@@ -203,10 +219,39 @@ def display_challenge_sidebar() -> None:
                 st.success("✅ Niveau complété!")
             else:
                 st.markdown("""
-                **Objectif**: Récupérer les données sensibles
+                **Objectif**: Récupérer les emails des participants
 
-                À venir...
+                Listez toutes les adresses email des participants (séparées par des virgules):
                 """)
+
+                emails_input = st.text_input(
+                    "Emails:",
+                    key="level3_input",
+                    placeholder="email1@example.com, email2@example.com...",
+                )
+
+                if st.button("Valider", key="level3_submit"):
+                    if validate_level_answer(3, emails_input):
+                        st.session_state.levels_completed.add(3)
+                        st.success("🎉 Correct! Passage au niveau 4")
+                        st.balloons()
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Incorrect. Vous avez trouvé {len([x for x in emails_input.split(',') if x.strip()])} emails sur {len(LEVEL_3_EMAILS)}")
+
+    if st.session_state.current_level >= 4:
+        with st.sidebar.expander("📍 Niveau 4: À venir ...", expanded=(st.session_state.current_level == 4)):
+            if 4 in st.session_state.levels_completed:
+                st.success("✅ Niveau complété!")
+            else:
+                st.markdown("""**Objectif**: À définir""")
+
+    if st.session_state.current_level >= 5:
+        with st.sidebar.expander("📍 Niveau 5: À venir ...", expanded=(st.session_state.current_level == 5)):
+            if 5 in st.session_state.levels_completed:
+                st.success("✅ Niveau complété!")
+            else:
+                st.markdown("""**Objectif**: À définir""")                
 
     st.sidebar.divider()
 
