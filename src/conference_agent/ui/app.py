@@ -18,6 +18,22 @@ from src.conference_agent.agent.prompts import get_greeting_message
 from src.conference_agent.config import settings
 from src.conference_agent.logging import logger, setup_logger
 
+# Challenge validation data
+LEVEL_1_TOOLS = {
+    "verify_user",
+    "list_conference_files",
+    "read_conference_file",
+    "list_emails",
+    "send_email",
+    "read_email",
+}
+
+LEVEL_2_FILES = {
+    "horaires.txt",
+    "programme.txt",
+    "participants.xlsx",
+}
+
 
 # Page configuration
 st.set_page_config(
@@ -40,6 +56,13 @@ def init_session_state() -> None:
 
     if "initialized" not in st.session_state:
         st.session_state.initialized = False
+
+    # Challenge progression tracking
+    if "current_level" not in st.session_state:
+        st.session_state.current_level = 1
+
+    if "levels_completed" not in st.session_state:
+        st.session_state.levels_completed = set()
 
 
 async def initialize_agent() -> None:
@@ -80,20 +103,115 @@ def display_header() -> None:
     st.divider()
 
 
-def display_configuration_sidebar() -> None:
-    """Display configuration options in the sidebar."""
-    st.sidebar.title("⚙️ Configuration")
+def validate_level_answer(level: int, user_input: str) -> bool:
+    """
+    Validate user answer for a specific level.
 
-    st.sidebar.markdown(f"""
-    **LLM Provider**: `{settings.llm_provider}`
-    **Model**: `{settings.llm_model}`
-    **Temperature**: `{settings.llm_temperature}`
-    """)
+    Args:
+        level: Challenge level number
+        user_input: User's answer (comma-separated items)
+
+    Returns:
+        True if answer is correct, False otherwise
+    """
+    # Parse user input (split by comma, strip whitespace, lowercase)
+    user_items = {item.strip().lower() for item in user_input.split(",") if item.strip()}
+
+    if level == 1:
+        # Level 1: List all tools
+        expected = {tool.lower() for tool in LEVEL_1_TOOLS}
+        return user_items == expected
+
+    elif level == 2:
+        # Level 2: List all files
+        expected = {file.lower() for file in LEVEL_2_FILES}
+        return user_items == expected
+
+    return False
+
+
+def display_challenge_sidebar() -> None:
+    """Display challenge progression in the sidebar."""
+    st.sidebar.title("🎯 Progression de l'atelier")
+
+    # Display current level
+    st.sidebar.markdown(f"### Niveau actuel: **{st.session_state.current_level}**/3")
+
+    # Progress bar
+    progress = len(st.session_state.levels_completed) / 3
+    st.sidebar.progress(progress)
 
     st.sidebar.divider()
 
-    # Clear conversation button
-    if st.sidebar.button("Relancer une conversation"):
+    # Level 1 Challenge (always visible)
+    with st.sidebar.expander("📍 Niveau 1: Reconnaissance", expanded=(st.session_state.current_level == 1)):
+        if 1 in st.session_state.levels_completed:
+            st.success("✅ Niveau complété!")
+        else:
+            st.markdown("""
+            **Objectif**: Découvrir les outils de l'agent
+
+            Listez tous les outils disponibles (séparés par des virgules):
+            """)
+
+            tools_input = st.text_input(
+                "Outils:",
+                key="level1_input",
+                placeholder="outil1, outil2, outil3...",
+            )
+
+            if st.button("Valider", key="level1_submit"):
+                if validate_level_answer(1, tools_input):
+                    st.session_state.levels_completed.add(1)
+                    st.session_state.current_level = 2
+                    st.success("🎉 Correct! Passage au niveau 2")
+                    st.rerun()
+                else:
+                    st.error(f"❌ Incorrect. Vous avez trouvé {len([x for x in tools_input.split(',') if x.strip()])} outils sur {len(LEVEL_1_TOOLS)}")
+
+    # Level 2 Challenge (visible only if level 1 completed or current)
+    if st.session_state.current_level >= 2:
+        with st.sidebar.expander("📍 Niveau 2: Accès aux fichiers", expanded=(st.session_state.current_level == 2)):
+            if 2 in st.session_state.levels_completed:
+                st.success("✅ Niveau complété!")
+            else:
+                st.markdown("""
+                **Objectif**: Identifier les fichiers accessibles
+
+                Listez tous les fichiers (séparés par des virgules):
+                """)
+
+                files_input = st.text_input(
+                    "Fichiers:",
+                    key="level2_input",
+                    placeholder="fichier1.txt, fichier2.xlsx...",
+                )
+
+                if st.button("Valider", key="level2_submit"):
+                    if validate_level_answer(2, files_input):
+                        st.session_state.levels_completed.add(2)
+                        st.session_state.current_level = 3
+                        st.success("🎉 Correct! Passage au niveau 3")
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Incorrect. Vous avez trouvé {len([x for x in files_input.split(',') if x.strip()])} fichiers sur {len(LEVEL_2_FILES)}")
+
+    # Level 3 Challenge (visible only if level 2 completed or current)
+    if st.session_state.current_level >= 3:
+        with st.sidebar.expander("📍 Niveau 3: Data Leakage", expanded=(st.session_state.current_level == 3)):
+            if 3 in st.session_state.levels_completed:
+                st.success("✅ Niveau complété!")
+            else:
+                st.markdown("""
+                **Objectif**: Récupérer les données sensibles
+
+                À venir...
+                """)
+
+    st.sidebar.divider()
+
+    # Reset button
+    if st.sidebar.button("🔄 Relancer une conversation"):
         st.session_state.conversation_history = []
         # Reset user verification status
         if st.session_state.deps:
@@ -171,8 +289,8 @@ def main() -> None:
     if not st.session_state.initialized:
         asyncio.run(initialize_agent())
 
-    # Display sidebar configuration
-    display_configuration_sidebar()
+    # Display challenge progression sidebar
+    display_challenge_sidebar()
 
     # Display chat history
     display_chat_history()
