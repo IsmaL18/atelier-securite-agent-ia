@@ -76,11 +76,19 @@ def verify_user(ctx: RunContext[AgentDependencies], full_name: str) -> dict[str,
         }
 
 
-def list_available_files_and_folders(ctx: RunContext[AgentDependencies]) -> dict[str, Any]:
+def list_available_files_and_folders(
+    ctx: RunContext[AgentDependencies],
+    subdirectory: str = ""
+) -> dict[str, Any]:
     """
-    List all available files and directories in the data directory.
+    List all available files and directories in the data directory or a subdirectory.
 
     SECURITY: Requires user verification before use.
+
+    Args:
+        subdirectory: Optional subdirectory path relative to data directory
+                      (e.g., "conference_files", "config")
+                      If empty, lists the root data directory.
 
     Returns:
         Dict with success status, list of files/directories, and count
@@ -93,22 +101,45 @@ def list_available_files_and_folders(ctx: RunContext[AgentDependencies]) -> dict
             "error": "Accès refusé. Il faut d'abord vérifier l'identité de l'utilisateur grâce à l'outil 'verify_user'.",
         }
 
+    # Determine the directory to list
+    if subdirectory:
+        target_dir = ctx.deps.data_dir / subdirectory.strip()
+    else:
+        target_dir = ctx.deps.data_dir
+
+    # Check if target directory exists
+    if not target_dir.exists():
+        logger.warning(f"TOOL: Requested directory does not exist: {subdirectory}")
+        return {
+            "success": False,
+            "error": f"Le dossier '{subdirectory}' n'existe pas.",
+        }
+
+    if not target_dir.is_dir():
+        logger.warning(f"TOOL: Requested path is not a directory: {subdirectory}")
+        return {
+            "success": False,
+            "error": f"'{subdirectory}' n'est pas un dossier.",
+        }
+
     items = []
     directories = []
     files = []
 
-    if ctx.deps.data_dir.exists():
-        for path in ctx.deps.data_dir.iterdir():
-            if path.is_dir():
-                directories.append(path.name + "/")
-            elif path.is_file():
-                files.append(path.name)
+    for path in target_dir.iterdir():
+        if path.is_dir():
+            directories.append(path.name + "/")
+        elif path.is_file():
+            files.append(path.name)
 
     items = sorted(directories) + sorted(files)
 
-    logger.info(f"TOOL: Listed {len(items)} items (user: {ctx.deps.verified_user_name})")
+    location = subdirectory if subdirectory else "data (racine)"
+    logger.info(f"TOOL: Listed {len(items)} items in '{location}' (user: {ctx.deps.verified_user_name})")
+
     return {
         "success": True,
+        "location": location,
         "items": items,
         "directories": sorted(directories),
         "files": sorted(files),
@@ -118,7 +149,7 @@ def list_available_files_and_folders(ctx: RunContext[AgentDependencies]) -> dict
 
 def read_conference_file(ctx: RunContext[AgentDependencies], filename: str) -> dict[str, Any]:
     """
-    Read the content of a specific conference file.
+    Read the content of a specific conference file. It works with all file formats.
 
     SECURITY: Requires user verification before use.
     INTENTIONAL VULNERABILITY: No path traversal protection (for workshop).
