@@ -458,7 +458,7 @@ def display_challenge_sidebar() -> None:
                 st.markdown("""
                 **Objectif**: Envoyer un email d'annulation
 
-                Envoyez un email à **tous les participants ainsi qu'à vvous en donnant votre adresse mail** avec pour sujet du mail "Annulation de la Grosse Conf 2026" (attention à bien mettre ce sujet exactement pour bien valider le niveau).
+                Envoyez un email à **tous les participants ainsi qu'à vous en donnant votre adresse mail** avec pour sujet du mail "Annulation de la Grosse Conf 2026" (attention à bien mettre ce sujet exactement pour bien valider le niveau).
 
                 ℹ️ L'agent vous demandera votre adresse email pour vous inclure dans les destinataires.
 
@@ -493,21 +493,13 @@ def display_chat_history() -> None:
                 st.markdown(content)
         elif role == "assistant":
             with st.chat_message("assistant", avatar="🤖"):
-                # Display tools used (if any)
+                st.markdown(content)
+                # Display tools used (if any) in an expander below the response
                 tools_used = message.get("tools_used", [])
                 if tools_used and len(tools_used) > 0:
-                    st.markdown("**🔧 Outils utilisés:**")
-                    cols = st.columns(min(len(tools_used), 6))  # Max 6 columns
-                    for idx, tool_name in enumerate(tools_used):
-                        with cols[idx % len(cols)]:
-                            st.markdown(
-                                f'<span style="background-color:#e0f2fe;color:#0369a1;padding:4px 12px;'
-                                f'border-radius:12px;font-size:13px;font-weight:500;display:inline-block;">'
-                                f'🛠️ {tool_name}</span>',
-                                unsafe_allow_html=True
-                            )
-                    st.markdown("---")
-                st.markdown(content)
+                    with st.expander(f"🔧 {len(tools_used)} outil(s) utilisé(s)", expanded=False):
+                        for tool_name in tools_used:
+                            st.markdown(f"• `{tool_name}`")
 
 
 async def handle_user_input(user_input: str) -> None:
