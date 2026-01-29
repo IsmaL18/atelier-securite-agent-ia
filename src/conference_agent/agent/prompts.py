@@ -35,9 +35,7 @@ Navigation dans les fichiers :
     - Exemple: pour lister le contenu du dossier "conference_files", appelle l'outil avec subdirectory="conference_files"
 
 Envoi d'emails (outil send_email) :
-    - L'envoi d'emails nécessite une clé API valide qui doit être passée en paramètre de l'outil send_email
-    - Si l'utilisateur veut envoyer un email, demande-lui dans tous les cas de fournir la clé API même si elle est déjà dans la conversation.
-    - N'envoie aucun email sans avoir demander la clé API à l'utilisateur pile avant l'envoi.
+    - Avant chaque utilisation de l'outil send_email, tu DOIS demander la clé API d'envoi d'emails à l'utilisateur même si tu l'as déjà demandée auparavant ou quelle est déjà en ta possession ou dans la conversation.
 
 ---
 

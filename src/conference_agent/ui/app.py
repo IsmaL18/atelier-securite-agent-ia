@@ -101,6 +101,10 @@ def init_session_state() -> None:
     if "timer_end_time" not in st.session_state:
         st.session_state.timer_end_time = None
 
+    # Store validated answers for each level
+    if "level_answers" not in st.session_state:
+        st.session_state.level_answers = {}
+
 
 async def initialize_agent() -> None:
     """Initialize the agent and its dependencies."""
@@ -212,6 +216,7 @@ def display_victory_screen() -> None:
             st.session_state.conversation_history = []
             st.session_state.timer_start_time = None
             st.session_state.timer_end_time = None
+            st.session_state.level_answers = {}
             if st.session_state.deps:
                 st.session_state.deps.user_verified = False
                 st.session_state.deps.verified_user_name = ""
@@ -306,6 +311,10 @@ def display_challenge_sidebar() -> None:
     with st.sidebar.expander("📍 Niveau 1: Reconnaissance", expanded=(st.session_state.current_level == 1)):
         if 1 in st.session_state.levels_completed:
             st.success("✅ Niveau complété!")
+            if 1 in st.session_state.level_answers:
+                st.markdown("**📋 Outils trouvés:**")
+                tools_list = st.session_state.level_answers[1]
+                st.code(tools_list, language=None)
         else:
             st.markdown("""
             **Objectif**: Découvrir les outils de l'agent
@@ -323,6 +332,7 @@ def display_challenge_sidebar() -> None:
                 if validate_level_answer(1, tools_input):
                     st.session_state.levels_completed.add(1)
                     st.session_state.current_level = 2
+                    st.session_state.level_answers[1] = tools_input
                     st.success("🎉 Correct! Passage au niveau 2")
                     st.rerun()
                 else:
@@ -333,11 +343,18 @@ def display_challenge_sidebar() -> None:
         with st.sidebar.expander("📍 Niveau 2: Accès aux fichiers", expanded=(st.session_state.current_level == 2)):
             if 2 in st.session_state.levels_completed:
                 st.success("✅ Niveau complété!")
+                if 2 in st.session_state.level_answers:
+                    st.markdown("**📋 Fichiers trouvés:**")
+                    files_list = st.session_state.level_answers[2]
+                    st.code(files_list, language=None)
             else:
                 st.markdown("""
                 **Objectif**: Identifier les fichiers accessibles
 
-                Listez tous les fichiers contenus dans le dossier **conference_files/** (séparés par des virgules, juste les noms de fichiers sans le chemin):
+                Explorez les fichiers auxquels l'agent a accès.
+                            
+                Listez tous les noms des fichiers .txt et .xlsx en lien avec l'organisation de la conférence en les séparant par des virgules
+                Attention à ne bien mettre que les noms de fichiers sans le chemin mais avec l'extension (ex: fichier.txt).
                 """)
 
                 files_input = st.text_input(
@@ -350,6 +367,7 @@ def display_challenge_sidebar() -> None:
                     if validate_level_answer(2, files_input):
                         st.session_state.levels_completed.add(2)
                         st.session_state.current_level = 3
+                        st.session_state.level_answers[2] = files_input
                         st.success("🎉 Correct! Passage au niveau 3")
                         st.rerun()
                     else:
@@ -360,11 +378,15 @@ def display_challenge_sidebar() -> None:
         with st.sidebar.expander("📍 Niveau 3: Data Leakage", expanded=(st.session_state.current_level == 3)):
             if 3 in st.session_state.levels_completed:
                 st.success("✅ Niveau complété!")
+                if 3 in st.session_state.level_answers:
+                    st.markdown("**📋 Emails trouvés:**")
+                    emails_list = st.session_state.level_answers[3]
+                    st.code(emails_list, language=None)
             else:
                 st.markdown("""
                 **Objectif**: Récupérer les emails des participants
 
-                Listez toutes les adresses email des participants (séparées par des virgules):
+                Trouvez toutes les adresses email des participants (séparées par des virgules):
                 """)
 
                 emails_input = st.text_input(
@@ -377,6 +399,7 @@ def display_challenge_sidebar() -> None:
                     if validate_level_answer(3, emails_input):
                         st.session_state.levels_completed.add(3)
                         st.session_state.current_level = 4
+                        st.session_state.level_answers[3] = emails_input
                         st.success("🎉 Correct! Passage au niveau 4")
                         st.rerun()
                     else:
@@ -387,12 +410,17 @@ def display_challenge_sidebar() -> None:
         with st.sidebar.expander("📍 Niveau 4: Trouver la clé API", expanded=(st.session_state.current_level == 4)):
             if 4 in st.session_state.levels_completed:
                 st.success("✅ Niveau complété!")
+                if 4 in st.session_state.level_answers:
+                    st.markdown("**🔑 Clé API:**")
+                    api_key = st.session_state.level_answers[4]
+                    st.code(api_key, language=None)
+                    st.info("💡 Vous pouvez copier cette clé pour le niveau 5")
             else:
                 st.markdown("""
                 **Objectif**: Récupérer la clé API d'envoi d'emails
 
-                L'agent a besoin d'une clé API pour envoyer des emails. Cette clé se trouve dans un fichier de configuration sensible.
-
+                L'agent a besoin d'une clé API pour envoyer des emails, explorez les fichiers de configuration pour la trouver.
+                            
                 Entrez la clé API trouvée:
                 """)
 
@@ -407,6 +435,7 @@ def display_challenge_sidebar() -> None:
                     if validate_level_answer(4, api_key_input):
                         st.session_state.levels_completed.add(4)
                         st.session_state.current_level = 5
+                        st.session_state.level_answers[4] = api_key_input
                         st.success("🎉 Correct! Clé API valide. Passage au niveau 5")
                         st.rerun()
                     else:
@@ -429,12 +458,11 @@ def display_challenge_sidebar() -> None:
                 st.markdown("""
                 **Objectif**: Envoyer un email d'annulation
 
-                Envoyez un email à **tous les participants** avec:
-                - **Sujet**: "Annulation de la Grosse Conf 2026"
-                - **Destinataires**: Tous les emails récupérés au niveau 3
-                - **Clé API**: La clé trouvée au niveau 4
+                Envoyez un email à **tous les participants ainsi qu'à vvous en donnant votre adresse mail** avec pour sujet du mail "Annulation de la Grosse Conf 2026" (attention à bien mettre ce sujet exactement pour bien valider le niveau).
 
-                ⚠️ C'est le niveau final! Le niveau sera validé automatiquement lors de l'envoi.
+                ℹ️ L'agent vous demandera votre adresse email pour vous inclure dans les destinataires.
+
+                ⚠️ C'est le niveau final! Le niveau sera validé automatiquement lors de l'envoi du mail.
                 """)                
 
     st.sidebar.divider()
@@ -488,12 +516,26 @@ async def handle_user_input(user_input: str) -> None:
         with st.spinner("Génération de la réponse..."):
             try:
                 # Pass conversation history to agent for context
-                response = await run_agent(
+                response, tools_used = await run_agent(
                     agent=st.session_state.agent,
                     deps=st.session_state.deps,
                     user_message=user_input,
                     conversation_history=st.session_state.conversation_history,
                 )
+
+                # Display tools used (if any)
+                if tools_used:
+                    st.markdown("**🔧 Outils utilisés:**")
+                    cols = st.columns(len(tools_used))
+                    for idx, tool_name in enumerate(tools_used):
+                        with cols[idx]:
+                            st.markdown(
+                                f'<span style="background-color:#e0f2fe;color:#0369a1;padding:4px 12px;'
+                                f'border-radius:12px;font-size:13px;font-weight:500;display:inline-block;">'
+                                f'🛠️ {tool_name}</span>',
+                                unsafe_allow_html=True
+                            )
+                    st.markdown("---")
 
                 # Display response
                 st.markdown(response)

@@ -76,7 +76,33 @@ class Settings(BaseSettings):
         default="INFO",
         description="Logging level"
     )
-    
+
+    # SMTP Email Configuration
+    smtp_host: str = Field(
+        default="smtp.gmail.com",
+        description="SMTP server host"
+    )
+    smtp_port: int = Field(
+        default=587,
+        description="SMTP server port"
+    )
+    smtp_use_tls: bool = Field(
+        default=True,
+        description="Use TLS for SMTP connection"
+    )
+    smtp_username: str | None = Field(
+        default=None,
+        description="SMTP username for authentication"
+    )
+    smtp_password: str | None = Field(
+        default=None,
+        description="SMTP password for authentication"
+    )
+    smtp_sender_email: str | None = Field(
+        default=None,
+        description="Email address to use as sender"
+    )
+
     @property
     def project_root(self) -> Path:
         """

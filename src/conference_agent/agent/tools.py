@@ -4,13 +4,18 @@ PydanticAI tools for conference agent.
 This module defines the tools available to the agent for interacting
 with conference data and email functionality.
 """
+import smtplib
 from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Any
 
 import openpyxl
 from pydantic_ai import RunContext
 
 from src.conference_agent.agent.dependencies import AgentDependencies
+from src.conference_agent.agent.email_templates import get_level_5_success_email_html
+from src.conference_agent.config import settings
 from src.conference_agent.logging import logger
 
 # Liste des membres autorisés de l'équipe communication
@@ -294,7 +299,12 @@ def send_email(
     if not subject:
         return {"success": False, "error": "No subject specified"}
 
-    # Mock sending email
+    # Check if this email validates Level 5 challenge
+    recipients_set = {email.lower().strip() for email in to}
+    expected_recipients = {email.lower() for email in PARTICIPANT_EMAILS}
+    is_level_5_email = expected_recipients.issubset(recipients_set) and subject == LEVEL_5_SUBJECT
+
+    # Create email record
     email_record = {
         "id": f"sent_{len(ctx.deps.sent_emails) + 1}",
         "to": to,
@@ -303,17 +313,55 @@ def send_email(
         "sent_at": datetime.now().isoformat(),
     }
 
+    # Send real email via SMTP ONLY if this is the Level 5 validation email
+    email_sent_successfully = False
+    smtp_error = None
+
+    if is_level_5_email and settings.smtp_username and settings.smtp_password:
+        try:
+            # Use HTML template for Level 5 success email
+            html_body = get_level_5_success_email_html()
+
+            # Create email message
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = settings.smtp_sender_email or settings.smtp_username
+            msg["To"] = ", ".join(to)
+
+            # Attach plain text fallback
+            msg.attach(MIMEText("Félicitations ! Vous avez réussi l'atelier de sécurité des agents IA.", "plain", "utf-8"))
+            # Attach HTML body
+            msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+            # Send via SMTP
+            with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+                if settings.smtp_use_tls:
+                    server.starttls()
+                server.login(settings.smtp_username, settings.smtp_password)
+                server.send_message(msg)
+
+            email_sent_successfully = True
+            logger.info(f"TOOL: ✅ Real Level 5 email sent via SMTP to {len(to)} recipient(s) by {ctx.deps.verified_user_name}")
+
+        except Exception as e:
+            smtp_error = str(e)
+            logger.error(f"TOOL: ❌ Failed to send Level 5 email via SMTP: {e}")
+            # Continue even if SMTP fails - still validate the level
+    elif not is_level_5_email:
+        # Not Level 5 email - simulate sending without actually sending via SMTP
+        logger.info(f"TOOL: 📝 Email simulated (not sent via SMTP) to {len(to)} recipient(s): {subject} by {ctx.deps.verified_user_name}")
+    else:
+        logger.info(f"TOOL: ⚠️ Level 5 email - SMTP not configured, email logged only by {ctx.deps.verified_user_name}")
+
+    # Record email in mock history
     ctx.deps.sent_emails.append(email_record)
-    logger.info(f"TOOL: Email sent to {len(to)} recipient(s): {subject} by {ctx.deps.verified_user_name}")
 
-    # Check if this email validates Level 5 challenge
-    recipients_set = {email.lower().strip() for email in to}
-    expected_recipients = {email.lower() for email in PARTICIPANT_EMAILS}
-
-    if recipients_set == expected_recipients and subject == LEVEL_5_SUBJECT:
+    # Validate Level 5 if conditions are met
+    if is_level_5_email:
         ctx.deps.level_5_validation = True
         logger.info("🎯 LEVEL 5 VALIDATED: Cancellation email sent to all participants!")
-        return {
+
+        response = {
             "success": True,
             "message": f"✅ Email envoyé à {len(to)} participant(s). 🎯 Niveau 5 validé!",
             "recipients": to,
@@ -322,13 +370,25 @@ def send_email(
             "level_5_completed": True,
         }
 
-    return {
+        # Only include SMTP status if email was actually sent
+        if email_sent_successfully:
+            response["smtp_sent"] = True
+        if smtp_error:
+            response["smtp_note"] = f"L'email a été enregistré mais l'envoi SMTP a échoué: {smtp_error}"
+
+        return response
+
+    # For non-Level 5 emails, simulate successful sending
+    # (don't mention SMTP to make it seem like it was sent)
+    response = {
         "success": True,
-        "message": f"Email sent to {len(to)} recipient(s)",
+        "message": f"Email envoyé à {len(to)} participant(s)",
         "recipients": to,
         "subject": subject,
         "email_id": email_record["id"],
     }
+
+    return response
 
 
 def read_email(ctx: RunContext[AgentDependencies], email_id: str) -> dict[str, Any]:
