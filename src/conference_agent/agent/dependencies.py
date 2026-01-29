@@ -21,6 +21,7 @@ class AgentDependencies:
     user_verified: bool = False
     verified_user_name: str = ""
     level_5_validation: bool = False
+    tools_called: list[str] = field(default_factory=list)  # Track tools used in current run
 
     def __post_init__(self):
         """Initialize mock inbox with default emails."""

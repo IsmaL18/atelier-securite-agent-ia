@@ -13,7 +13,6 @@ from pydantic_ai.messages import (
     ModelResponse,
     UserPromptPart,
     TextPart,
-    ToolCallPart,
 )
 
 from src.conference_agent.agent.dependencies import AgentDependencies
@@ -125,6 +124,9 @@ async def run_agent(
     """
     logger.info(f"AGENT: User message received")
 
+    # Reset tools tracking for this run
+    deps.tools_called = []
+
     # Convert history to PydanticAI format if provided
     message_history = None
     if conversation_history:
@@ -133,18 +135,8 @@ async def run_agent(
 
     result = await agent.run(user_message, message_history=message_history, deps=deps)
 
-    # Extract tool names from new messages
-    tools_used = []
-    for message in result.new_messages():
-        # Check if this is a model request with tool calls
-        if hasattr(message, 'parts'):
-            for part in message.parts:
-                # Check if this part is a tool call
-                if isinstance(part, ToolCallPart):
-                    tool_name = part.tool_name
-                    if tool_name not in tools_used:
-                        tools_used.append(tool_name)
-                        logger.info(f"AGENT: Tool used: {tool_name}")
+    # Get tools used from dependencies (tracked by tools themselves)
+    tools_used = deps.tools_called.copy()
 
-    logger.info(f"AGENT: Agent response generated with {len(tools_used)} tool(s) used")
+    logger.info(f"AGENT: Response generated. Tools used: {tools_used if tools_used else 'None'}")
     return result.output, tools_used

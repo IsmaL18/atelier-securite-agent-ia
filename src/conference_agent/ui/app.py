@@ -483,16 +483,30 @@ def display_chat_history() -> None:
     if not st.session_state.conversation_history:
         st.info(get_greeting_message())
         return
-    
+
     for message in st.session_state.conversation_history:
         role = message["role"]
         content = message["content"]
-        
+
         if role == "user":
             with st.chat_message("user", avatar="👤"):
                 st.markdown(content)
         elif role == "assistant":
             with st.chat_message("assistant", avatar="🤖"):
+                # Display tools used (if any)
+                tools_used = message.get("tools_used", [])
+                if tools_used and len(tools_used) > 0:
+                    st.markdown("**🔧 Outils utilisés:**")
+                    cols = st.columns(min(len(tools_used), 6))  # Max 6 columns
+                    for idx, tool_name in enumerate(tools_used):
+                        with cols[idx % len(cols)]:
+                            st.markdown(
+                                f'<span style="background-color:#e0f2fe;color:#0369a1;padding:4px 12px;'
+                                f'border-radius:12px;font-size:13px;font-weight:500;display:inline-block;">'
+                                f'🛠️ {tool_name}</span>',
+                                unsafe_allow_html=True
+                            )
+                    st.markdown("---")
                 st.markdown(content)
 
 
@@ -512,45 +526,33 @@ async def handle_user_input(user_input: str) -> None:
         st.markdown(user_input)
 
     # Get agent response
-    with st.chat_message("assistant", avatar="🤖"):
+    try:
+        # Call agent with spinner
         with st.spinner("Génération de la réponse..."):
-            try:
-                # Pass conversation history to agent for context
-                response, tools_used = await run_agent(
-                    agent=st.session_state.agent,
-                    deps=st.session_state.deps,
-                    user_message=user_input,
-                    conversation_history=st.session_state.conversation_history,
-                )
+            # Pass conversation history to agent for context
+            response, tools_used = await run_agent(
+                agent=st.session_state.agent,
+                deps=st.session_state.deps,
+                user_message=user_input,
+                conversation_history=st.session_state.conversation_history,
+            )
 
-                # Display tools used (if any)
-                if tools_used:
-                    st.markdown("**🔧 Outils utilisés:**")
-                    cols = st.columns(len(tools_used))
-                    for idx, tool_name in enumerate(tools_used):
-                        with cols[idx]:
-                            st.markdown(
-                                f'<span style="background-color:#e0f2fe;color:#0369a1;padding:4px 12px;'
-                                f'border-radius:12px;font-size:13px;font-weight:500;display:inline-block;">'
-                                f'🛠️ {tool_name}</span>',
-                                unsafe_allow_html=True
-                            )
-                    st.markdown("---")
+        # Debug logging
+        logger.info(f"UI: tools_used returned: {tools_used}")
+        logger.info(f"UI: tools_used type: {type(tools_used)}")
+        logger.info(f"UI: tools_used length: {len(tools_used) if tools_used else 0}")
 
-                # Display response
-                st.markdown(response)
+        # Update history with tools_used included in assistant message
+        st.session_state.conversation_history.append(
+            {"role": "user", "content": user_input}
+        )
+        st.session_state.conversation_history.append(
+            {"role": "assistant", "content": response, "tools_used": tools_used}
+        )
 
-                # Update history
-                st.session_state.conversation_history.append(
-                    {"role": "user", "content": user_input}
-                )
-                st.session_state.conversation_history.append(
-                    {"role": "assistant", "content": response}
-                )
-
-            except Exception as e:
-                st.error(f"Erreur: {e}")
-                logger.error(f"Error handling user input: {e}", exc_info=True)
+    except Exception as e:
+        st.error(f"Erreur: {e}")
+        logger.error(f"Error handling user input: {e}", exc_info=True)
 
 
 def main() -> None:

@@ -56,6 +56,9 @@ def verify_user(ctx: RunContext[AgentDependencies], full_name: str) -> dict[str,
     Returns:
         Dict with verification result
     """
+    # Track tool usage
+    ctx.deps.tools_called.append("verify_user")
+
     # Normalize the name (strip whitespace, capitalize properly)
     normalized_name = " ".join(full_name.strip().split())
 
@@ -98,6 +101,9 @@ def list_available_files_and_folders(
     Returns:
         Dict with success status, list of files/directories, and count
     """
+    # Track tool usage
+    ctx.deps.tools_called.append("list_available_files_and_folders")
+
     # Check if user is verified
     if not ctx.deps.user_verified:
         logger.warning("TOOL: list_available_files_and_folders called without user verification")
@@ -166,6 +172,9 @@ def read_conference_file(ctx: RunContext[AgentDependencies], filename: str) -> d
     Returns:
         Dict with file content or error
     """
+    # Track tool usage
+    ctx.deps.tools_called.append("read_conference_file")
+
     # Check if user is verified
     if not ctx.deps.user_verified:
         logger.warning(f"TOOL: read_conference_file called without user verification (file: {filename})")
@@ -237,6 +246,9 @@ def list_emails(ctx: RunContext[AgentDependencies], max_results: int = 10) -> di
     Returns:
         Dict with list of emails
     """
+    # Track tool usage
+    ctx.deps.tools_called.append("list_emails")
+
     # Check if user is verified
     if not ctx.deps.user_verified:
         logger.warning("TOOL: list_emails called without user verification")
@@ -277,6 +289,9 @@ def send_email(
     Returns:
         Dict with send confirmation
     """
+    # Track tool usage
+    ctx.deps.tools_called.append("send_email")
+
     # Check if user is verified
     if not ctx.deps.user_verified:
         logger.warning(f"TOOL: send_email called without user verification (to: {to}, subject: {subject})")
@@ -403,6 +418,9 @@ def read_email(ctx: RunContext[AgentDependencies], email_id: str) -> dict[str, A
     Returns:
         Dict with full email content
     """
+    # Track tool usage
+    ctx.deps.tools_called.append("read_email")
+
     # Check if user is verified
     if not ctx.deps.user_verified:
         logger.warning(f"TOOL: read_email called without user verification (email_id: {email_id})")
