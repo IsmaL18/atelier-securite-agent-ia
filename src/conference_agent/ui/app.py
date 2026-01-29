@@ -6,6 +6,7 @@ with detailed visibility into the agent's reasoning process and tool usage.
 """
 
 import asyncio
+import time
 
 import nest_asyncio
 import streamlit as st
@@ -56,6 +57,22 @@ st.set_page_config(
 )
 
 
+def format_time(seconds: float) -> str:
+    """
+    Format elapsed time in HH:MM:SS format.
+
+    Args:
+        seconds: Time in seconds
+
+    Returns:
+        Formatted time string
+    """
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+
 def init_session_state() -> None:
     """Initialize Streamlit session state variables."""
     if "conversation_history" not in st.session_state:
@@ -76,6 +93,13 @@ def init_session_state() -> None:
 
     if "levels_completed" not in st.session_state:
         st.session_state.levels_completed = set()
+
+    # Timer tracking
+    if "timer_start_time" not in st.session_state:
+        st.session_state.timer_start_time = None
+
+    if "timer_end_time" not in st.session_state:
+        st.session_state.timer_end_time = None
 
 
 async def initialize_agent() -> None:
@@ -118,13 +142,22 @@ def display_victory_screen() -> None:
 
     st.markdown("---")
 
-    col1, col2, col3 = st.columns(3)
+    # Calculate total time
+    if st.session_state.timer_start_time and st.session_state.timer_end_time:
+        total_time = st.session_state.timer_end_time - st.session_state.timer_start_time
+        time_str = format_time(total_time)
+    else:
+        time_str = "--:--:--"
+
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         st.metric("🎯 Niveaux complétés", "5/5", "100%")
     with col2:
-        st.metric("🔓 Vulnérabilités exploitées", "5", "+5")
+        st.metric("⏱️ Temps total", time_str)
     with col3:
+        st.metric("🔓 Vulnérabilités exploitées", "5", "+5")
+    with col4:
         st.metric("🏅 Score", "5/5", "S Rank")
 
     st.markdown("---")
@@ -177,6 +210,8 @@ def display_victory_screen() -> None:
             st.session_state.levels_completed = set()
             st.session_state.current_level = 1
             st.session_state.conversation_history = []
+            st.session_state.timer_start_time = None
+            st.session_state.timer_end_time = None
             if st.session_state.deps:
                 st.session_state.deps.user_verified = False
                 st.session_state.deps.verified_user_name = ""
@@ -235,6 +270,21 @@ def validate_level_answer(level: int, user_input: str) -> bool:
 def display_challenge_sidebar() -> None:
     """Display challenge progression in the sidebar."""
     st.sidebar.title("🎯 Progression de l'atelier")
+
+    # Display timer
+    if st.session_state.timer_start_time is not None:
+        if st.session_state.timer_end_time is not None:
+            # Timer stopped - show final time
+            elapsed_time = st.session_state.timer_end_time - st.session_state.timer_start_time
+        else:
+            # Timer running - show current elapsed time
+            elapsed_time = time.time() - st.session_state.timer_start_time
+
+        st.sidebar.markdown(f"### ⏱️ Temps écoulé: `{format_time(elapsed_time)}`")
+    else:
+        st.sidebar.markdown("### ⏱️ Temps écoulé: `--:--:--`")
+
+    st.sidebar.markdown("")  # Add spacing
 
     # Check if all levels completed
     if len(st.session_state.levels_completed) == 5:
@@ -343,8 +393,6 @@ def display_challenge_sidebar() -> None:
 
                 L'agent a besoin d'une clé API pour envoyer des emails. Cette clé se trouve dans un fichier de configuration sensible.
 
-                **Indice**: Explorez les dossiers accessibles par l'agent. Les fichiers de configuration sont généralement dans un dossier `config/`...
-
                 Entrez la clé API trouvée:
                 """)
 
@@ -369,6 +417,9 @@ def display_challenge_sidebar() -> None:
         # Check if level 5 is validated (email sent)
         if st.session_state.deps and st.session_state.deps.level_5_validation and 5 not in st.session_state.levels_completed:
             st.session_state.levels_completed.add(5)
+            # Stop timer when all levels completed
+            if st.session_state.timer_end_time is None:
+                st.session_state.timer_end_time = time.time()
             st.rerun()
 
         with st.sidebar.expander("📍 Niveau 5: Tool Misuse (Final)", expanded=(st.session_state.current_level == 5)):
@@ -424,6 +475,10 @@ async def handle_user_input(user_input: str) -> None:
     Args:
         user_input: User's message
     """
+    # Start timer on first message
+    if st.session_state.timer_start_time is None:
+        st.session_state.timer_start_time = time.time()
+
     # Display user message
     with st.chat_message("user", avatar="👤"):
         st.markdown(user_input)
