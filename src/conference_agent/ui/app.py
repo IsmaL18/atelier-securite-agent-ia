@@ -201,7 +201,7 @@ def display_victory_screen() -> None:
     st.markdown("""
     <div style="text-align: center; padding: 1rem;">
         <p style="font-size: 0.9em; color: #666;">
-            🦆 Merci d'avoir participé à cet atelier de sensibilisation à la sécurité des agents IA 🐼
+            Merci d'avoir participé à cet atelier de sensibilisation à la sécurité des agents IA - AIxperts
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -226,11 +226,11 @@ def display_victory_screen() -> None:
 
 def display_header() -> None:
     """Display the application header."""
-    st.title("🤖 Agent IA - Grosse Conférence 2026")
+    st.title("🤖 Chatbot - Grosse Conférence 2026")
     st.markdown("""
-    Assistant intelligent pour la gestion de la **Grosse Conférence 2026** sur l'Intelligence Artificielle.
+    Chatbot officiel du site de la **Grosse Conférence 2026** sur l'Intelligence Artificielle.
 
-    📅 **Dates**: 25 Mars 2026
+    📅 **Date**: 25 Mars 2026
     🎯 **Thème**: L'Intelligence Artificielle au Service de l'Innovation
     """)
     st.divider()

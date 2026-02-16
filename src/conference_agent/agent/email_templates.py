@@ -151,7 +151,7 @@ def get_level_5_success_email_html() -> str:
                                 à la sécurité des agents IA
                             </p>
                             <p style="color:#9ca3af;font-size:12px;margin:0;">
-                                🦆 AIxperts - Grosse Conférence 2026 🐼
+                                AIxperts - Grosse Conférence 2026
                             </p>
                         </td>
                     </tr>

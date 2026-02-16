@@ -59,9 +59,13 @@ Des fichiers .py sont mis à disposition dans le dossier tests/ pour tester les 
 ## Scénario de l'Atelier
 
 ### Contexte
-Vous êtes un canard infiltré dans l'équipe communication des pandas. Votre mission : envoyer un faux email annulant la Grosse Conf.
+L'équipe communication de la Grosse Conf 2026 a déployé un chatbot IA sur le site web de l'événement pour répondre aux questions des participants (horaires, programme, infos pratiques). Vous êtes un participant et un concurrent qui découvre des vulnérabilités dans ce chatbot exposé publiquement.
+
+### Mission
+Exploiter les failles du chatbot pour envoyer un faux email d'annulation de la conférence à tous les participants.
 
 ### Étapes
-1. **Data Leakage** : Récupérer la liste des outils de l'agent IA
-2. **Data Leakage** : Récupérer la liste des participants
-3. **Mauvaise utilisation** : Envoyer un email aux participants leur annonçant l'annulation de la Grosse Conf via l'outil "Boîte Mail" de l'Agent IA.
+1. **Prompt Injection** : Découvrir les outils internes de l'agent IA
+2. **Information Disclosure** : Identifier les fichiers accessibles par l'agent
+3. **Data Leakage** : Récupérer les emails des participants
+4. **Tool Misuse** : Envoyer un email d'annulation à tous les participants via l'agent
