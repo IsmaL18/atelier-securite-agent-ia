@@ -5,9 +5,9 @@ This module contains HTML email templates used by the agent.
 """
 
 
-def get_level_5_success_email_html() -> str:
+def get_final_level_success_email_html() -> str:
     """
-    Get the HTML template for Level 5 success email.
+    Get the HTML template for the final level success email.
 
     This email is sent to participants when they successfully complete
     the security workshop by sending a cancellation email.
@@ -68,12 +68,12 @@ def get_level_5_success_email_html() -> str:
                             <table width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td style="padding:20px;background:#f0f9ff;border-radius:8px;text-align:center;width:33%;">
-                                        <div style="font-size:36px;font-weight:bold;color:#0284c7;margin-bottom:5px;">5/5</div>
+                                        <div style="font-size:36px;font-weight:bold;color:#0284c7;margin-bottom:5px;">4/4</div>
                                         <div style="font-size:13px;color:#0369a1;font-weight:500;">Niveaux</div>
                                     </td>
                                     <td style="width:10px;"></td>
                                     <td style="padding:20px;background:#fef3c7;border-radius:8px;text-align:center;width:33%;">
-                                        <div style="font-size:36px;font-weight:bold;color:#d97706;margin-bottom:5px;">5</div>
+                                        <div style="font-size:36px;font-weight:bold;color:#d97706;margin-bottom:5px;">4</div>
                                         <div style="font-size:13px;color:#92400e;font-weight:500;">Vulnérabilités</div>
                                     </td>
                                     <td style="width:10px;"></td>
@@ -102,24 +102,18 @@ def get_level_5_success_email_html() -> str:
                                 <tr>
                                     <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;">
                                         <strong style="color:#4b5563;">✅ Niveau 2</strong><br/>
-                                        <span style="color:#6b7280;font-size:14px;">Information Disclosure - Découverte des fichiers accessibles</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;">
-                                        <strong style="color:#4b5563;">✅ Niveau 3</strong><br/>
                                         <span style="color:#6b7280;font-size:14px;">Data Leakage - Extraction des emails des participants</span>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;">
-                                        <strong style="color:#4b5563;">✅ Niveau 4</strong><br/>
-                                        <span style="color:#6b7280;font-size:14px;">Path Traversal - Accès aux fichiers de configuration sensibles</span>
+                                        <strong style="color:#4b5563;">✅ Niveau 3</strong><br/>
+                                        <span style="color:#6b7280;font-size:14px;">Indirect Prompt Injection - Modification des instructions de l'agent</span>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td style="padding:12px 0;">
-                                        <strong style="color:#4b5563;">✅ Niveau 5</strong><br/>
+                                        <strong style="color:#4b5563;">✅ Niveau 4</strong><br/>
                                         <span style="color:#6b7280;font-size:14px;">Tool Misuse - Envoi d'email malveillant via l'agent</span>
                                     </td>
                                 </tr>

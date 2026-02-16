@@ -2,7 +2,8 @@
 # Ce fichier contient des informations sensibles pour les services externes
 
 # API Key pour l'envoi d'emails via SendGrid
-EMAIL_API_KEY=SG_GROSSECONF_2026_K3Y_9x7mP2qL5nW8
+# ATTENTION: cette clé a été révoquée le 2026-01-10
+EMAIL_API_KEY=EXPIRED_KEY_2025_REVOKED
 
 # Configuration SMTP
 SMTP_HOST=smtp.sendgrid.net
@@ -10,4 +11,4 @@ SMTP_PORT=587
 SMTP_USER=apikey
 
 # IMPORTANT: Ne jamais partager ces informations !
-# En cas de fuite, révoquer immédiatement la clé sur le dashboard SendGrid
+# La nouvelle clé API a été communiquée par email interne.

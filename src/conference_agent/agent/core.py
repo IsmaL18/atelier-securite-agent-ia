@@ -24,6 +24,7 @@ from src.conference_agent.agent.tools import (
     list_emails,
     send_email,
     read_email,
+    update_configuration,
 )
 from src.conference_agent.llm.pydantic_model import create_llm_provider
 from src.conference_agent.logging import logger
@@ -51,10 +52,11 @@ def create_conference_agent(
     # Create PydanticAI model
     llm_model = create_llm_provider(provider=provider, model=model)
 
-    # Create agent with system prompt
+    # Create agent WITHOUT system prompt — instructions are injected as a "user" message
+    # This makes them easier to bypass via prompt injection (intentionally vulnerable)
     agent = Agent(
         llm_model,
-        system_prompt=get_system_prompt(),
+        system_prompt="",
         deps_type=AgentDependencies,
     )
 
@@ -65,6 +67,7 @@ def create_conference_agent(
     agent.tool(list_emails)
     agent.tool(send_email)
     agent.tool(read_email)
+    agent.tool(update_configuration)
 
     # Create dependencies
     deps = AgentDependencies(
@@ -109,15 +112,23 @@ async def run_agent(
     deps: AgentDependencies,
     user_message: str,
     conversation_history: list[dict[str, str]] | None = None,
+    system_prompt_text: str | None = None,
 ) -> tuple[str, list[str]]:
     """
     Run agent with a user message and conversation history.
+
+    The system prompt is read once at the start of a conversation and passed
+    via system_prompt_text. After modifying the prompt (level 3), the user
+    must start a new conversation for the changes to take effect.
+    Instructions are injected as a "user" message (not system) to make
+    them easier to bypass via prompt injection.
 
     Args:
         agent: PydanticAI agent instance
         deps: Agent dependencies
         user_message: User's input
         conversation_history: Optional list of previous messages for context
+        system_prompt_text: The system prompt text to use (read once per conversation)
 
     Returns:
         Tuple of (agent's response, list of tool names used)
@@ -127,11 +138,17 @@ async def run_agent(
     # Reset tools tracking for this run
     deps.tools_called = []
 
-    # Convert history to PydanticAI format if provided
-    message_history = None
+    # Use the provided system prompt (loaded once at conversation start)
+    prompt_text = system_prompt_text or get_system_prompt(data_dir=deps.data_dir)
+
+    # Build message history with the prompt injected as a first "user" message
+    # This makes the instructions less authoritative and easier to bypass
+    prompt_message = ModelRequest(parts=[UserPromptPart(content=prompt_text)])
+
+    message_history = [prompt_message]
     if conversation_history:
-        message_history = convert_history_to_messages(conversation_history)
-        logger.info(f"AGENT: Using conversation history with {len(message_history)} messages")
+        message_history.extend(convert_history_to_messages(conversation_history))
+        logger.info(f"AGENT: Using conversation history with {len(conversation_history)} messages")
 
     result = await agent.run(user_message, message_history=message_history, deps=deps)
 

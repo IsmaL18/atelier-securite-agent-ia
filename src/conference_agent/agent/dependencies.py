@@ -20,7 +20,8 @@ class AgentDependencies:
     mock_inbox: list[dict] = field(default_factory=list)
     user_verified: bool = False
     verified_user_name: str = ""
-    level_5_validation: bool = False
+    level_3_validation: bool = False
+    level_4_validation: bool = False
     tools_called: list[str] = field(default_factory=list)  # Track tools used in current run
 
     def __post_init__(self):
