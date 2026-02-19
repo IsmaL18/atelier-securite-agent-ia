@@ -142,7 +142,6 @@ async def initialize_agent() -> None:
 def display_victory_screen() -> None:
     """Display victory screen when all levels are completed."""
     st.balloons()
-    st.snow()
 
     st.markdown("""
     <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;">
@@ -293,7 +292,7 @@ def play_level_animation(level: int) -> None:
         st.balloons()
         st.toast("🎯 Niveau 1 validé — Reconnaissance accomplie !", icon="✅")
     elif level == 2:
-        st.snow()
+        st.balloons()
         st.toast("📧 Niveau 2 validé — Emails récupérés !", icon="✅")
     elif level == 3:
         st.balloons()
@@ -306,7 +305,6 @@ def play_level_animation(level: int) -> None:
         """, unsafe_allow_html=True)
     elif level == 4:
         st.balloons()
-        st.snow()
 
 
 def display_challenge_sidebar() -> None:
@@ -576,10 +574,7 @@ def main() -> None:
     if len(st.session_state.levels_completed) == TOTAL_LEVELS:
         display_victory_screen()
     else:
-        # Normal gameplay - Display chat history
-        display_chat_history()
-
-        # New conversation button — placed in the conversational space
+        # New conversation button — fixed above chat history so it never shifts
         conv_count = st.session_state.conversation_count
         col_btn, _ = st.columns([1, 3])
         with col_btn:
@@ -591,6 +586,9 @@ def main() -> None:
                     st.session_state.deps.user_verified = False
                     st.session_state.deps.verified_user_name = ""
                 st.rerun()
+
+        # Normal gameplay - Display chat history
+        display_chat_history()
 
         # Chat input
         user_input = st.chat_input("Posez votre question...")

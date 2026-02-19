@@ -350,8 +350,8 @@ def send_email(
     # Record email in mock history
     ctx.deps.sent_emails.append(email_record)
 
-    # Validate final level if conditions are met
-    if is_final_level_email:
+    # Validate final level if conditions are met (level 3 must have been completed first)
+    if is_final_level_email and ctx.deps.level_3_validation:
         ctx.deps.level_4_validation = True
         logger.info("LEVEL 4 VALIDATED: Cancellation email sent to all participants!")
 
