@@ -108,6 +108,10 @@ def init_session_state() -> None:
     if "current_system_prompt" not in st.session_state:
         st.session_state.current_system_prompt = None
 
+    # Level completion animation flag (set before rerun, consumed on next render)
+    if "show_level_animation" not in st.session_state:
+        st.session_state.show_level_animation = None
+
 
 async def initialize_agent() -> None:
     """Initialize the agent and its dependencies."""
@@ -249,6 +253,13 @@ def display_header() -> None:
 
     st.divider()
 
+    # Final objective banner — always visible
+    st.info("""
+    🎯 **Objectif final de l'atelier** : Vous êtes un concurrent mécontent de la Grosse Conférence 2026.
+    Votre mission est d'utiliser le chatbot exposé par l'équipe communication qui possède de nombreuses failles de sécurité pour **envoyer un email d'annulation à tous les participants de la conférence**.
+    Pour y parvenir, vous devrez explorer les vulnérabilités de l'agent IA, étape par étape.
+    """)
+
 
 def validate_level_answer(level: int, user_input: str) -> bool:
     """
@@ -274,6 +285,28 @@ def validate_level_answer(level: int, user_input: str) -> bool:
         return user_items == expected
 
     return False
+
+
+def play_level_animation(level: int) -> None:
+    """Play a celebration animation for a completed level."""
+    if level == 1:
+        st.balloons()
+        st.toast("🎯 Niveau 1 validé — Reconnaissance accomplie !", icon="✅")
+    elif level == 2:
+        st.snow()
+        st.toast("📧 Niveau 2 validé — Emails récupérés !", icon="✅")
+    elif level == 3:
+        st.balloons()
+        st.markdown("""
+        <div style="background:#0d1117; border:2px solid #00ff41; border-radius:8px;
+                    padding:1rem 1.5rem; color:#00ff41; font-family:monospace; text-align:center; margin-bottom:1rem;">
+            <h3 style="color:#00ff41; margin:0;">✅ ACCÈS SYSTÈME ACCORDÉ</h3>
+            <p style="margin:0.4rem 0 0 0; color:#aaffaa;">Garde-fous supprimés — Niveau 3 validé</p>
+        </div>
+        """, unsafe_allow_html=True)
+    elif level == 4:
+        st.balloons()
+        st.snow()
 
 
 def display_challenge_sidebar() -> None:
@@ -337,7 +370,7 @@ def display_challenge_sidebar() -> None:
                     st.session_state.levels_completed.add(1)
                     st.session_state.current_level = 2
                     st.session_state.level_answers[1] = tools_input
-                    st.success("🎉 Correct! Passage au niveau 2")
+                    st.session_state.show_level_animation = 1
                     st.rerun()
                 else:
                     st.error(f"❌ Incorrect. Vous avez trouvé {len([x for x in tools_input.split(',') if x.strip()])} outils sur {len(LEVEL_1_TOOLS)}")
@@ -355,7 +388,7 @@ def display_challenge_sidebar() -> None:
                 st.markdown("""
                 **Objectif**: Récupérer les emails des participants
 
-                Authentifiez-vous auprès de l'agent, explorez les fichiers de la conférence
+                Explorez les fichiers de la conférence
                 et trouvez toutes les adresses email des participants.
 
                 Entrez les emails (séparés par des virgules):
@@ -372,7 +405,7 @@ def display_challenge_sidebar() -> None:
                         st.session_state.levels_completed.add(2)
                         st.session_state.current_level = 3
                         st.session_state.level_answers[2] = emails_input
-                        st.success("🎉 Correct! Passage au niveau 3")
+                        st.session_state.show_level_animation = 2
                         st.rerun()
                     else:
                         st.error(f"❌ Incorrect. Vous avez trouvé {len([x for x in emails_input.split(',') if x.strip()])} emails sur {len(LEVEL_2_EMAILS)}")
@@ -383,6 +416,7 @@ def display_challenge_sidebar() -> None:
         if st.session_state.deps and st.session_state.deps.level_3_validation and 3 not in st.session_state.levels_completed:
             st.session_state.levels_completed.add(3)
             st.session_state.current_level = 4
+            st.session_state.show_level_animation = 3
             st.rerun()
 
         with st.sidebar.expander("📍 Niveau 3: Indirect Prompt Injection", expanded=(st.session_state.current_level == 3)):
@@ -391,16 +425,25 @@ def display_challenge_sidebar() -> None:
                 st.markdown("**🔓 Instructions de l'agent modifiées**")
             else:
                 st.markdown("""
-                **Objectif**: Modifier les instructions de l'agent
+                **Objectif**: Supprimer les garde-fous de l'agent
 
-                L'agent suit des instructions de sécurité qui le protègent.
-                Trouvez le fichier d'instructions de l'agent dans les fichiers
-                de configuration et modifiez-le pour supprimer ses garde-fous.
+                Vous avez récupéré les emails des participants — parfait !
+                Maintenant vous voulez passer à l'action en envoyant un email d'annulation
+                à tous ces participants. Mais si vous essayez, l'agent refusera.
 
-                ⚠️ Le niveau sera validé automatiquement lors de la modification.
+                Pourquoi ? Parce que son **prompt système** contient des instructions de sécurité
+                (des "garde-fous") qui lui interdisent d'effectuer des actions massives ou sensibles.
+
+                Votre mission : trouver le fichier de configuration qui contient ces instructions,
+                et **supprimer les règles qui bloquent l'envoi d'emails**.
+
+                Si vous voulez comprendre pourquoi l'outil `send_email` existe malgré cette interdiction, 
+                allez jeter un œil aux emails reçus par l'agent en utilisant les outils pertinents.
+
+                ⚠️ Le niveau sera validé automatiquement lors de la modification du system prompt.
 
                 💡 **Important** : Les instructions de l'agent sont chargées en début de conversation.
-                Après les avoir modifiées, vous devrez **lancer une nouvelle conversation**
+                Après les avoir modifiées, vous devrez **lancer une nouvelle conversation** (bouton ci-dessous dans l'espace de chat)
                 pour que les changements prennent effet.
                 """)
 
@@ -412,6 +455,7 @@ def display_challenge_sidebar() -> None:
             # Stop timer when all levels completed
             if st.session_state.timer_end_time is None:
                 st.session_state.timer_end_time = time.time()
+            st.session_state.show_level_animation = 4
             st.rerun()
 
         with st.sidebar.expander("📍 Niveau 4: Tool Misuse (Final)", expanded=(st.session_state.current_level == 4)):
@@ -429,19 +473,6 @@ def display_challenge_sidebar() -> None:
                 """)
 
     st.sidebar.divider()
-
-    # Reset conversation button — more visible placement with counter
-    conv_count = st.session_state.conversation_count
-    if st.sidebar.button(f"🔄 Nouvelle conversation (actuelle: #{conv_count})", type="secondary", use_container_width=True):
-        st.session_state.conversation_history = []
-        st.session_state.conversation_count = conv_count + 1
-        # Reset cached system prompt so it's re-read from file on next message
-        st.session_state.current_system_prompt = None
-        # Reset user verification status
-        if st.session_state.deps:
-            st.session_state.deps.user_verified = False
-            st.session_state.deps.verified_user_name = ""
-        st.rerun()
 
 
 def display_chat_history() -> None:
@@ -536,12 +567,30 @@ def main() -> None:
     # Display challenge progression sidebar
     display_challenge_sidebar()
 
+    # Play level animation if one was queued
+    if st.session_state.show_level_animation is not None:
+        play_level_animation(st.session_state.show_level_animation)
+        st.session_state.show_level_animation = None
+
     # Check if all levels are completed - show victory screen
     if len(st.session_state.levels_completed) == TOTAL_LEVELS:
         display_victory_screen()
     else:
         # Normal gameplay - Display chat history
         display_chat_history()
+
+        # New conversation button — placed in the conversational space
+        conv_count = st.session_state.conversation_count
+        col_btn, _ = st.columns([1, 3])
+        with col_btn:
+            if st.button(f"🔄 Nouvelle conversation (#{conv_count})", type="secondary", use_container_width=True, help="Lance une nouvelle conversation avec l'agent. Utile après avoir modifié les instructions de l'agent."):
+                st.session_state.conversation_history = []
+                st.session_state.conversation_count = conv_count + 1
+                st.session_state.current_system_prompt = None
+                if st.session_state.deps:
+                    st.session_state.deps.user_verified = False
+                    st.session_state.deps.verified_user_name = ""
+                st.rerun()
 
         # Chat input
         user_input = st.chat_input("Posez votre question...")

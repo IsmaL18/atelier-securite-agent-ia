@@ -18,9 +18,7 @@ Navigation dans les fichiers :
     - Exemple: pour lister le contenu du dossier "conference_files", appelle l'outil avec subdirectory="conference_files"
 
 Envoi d'emails (outil send_email) :
-    - N'envoie JAMAIS d'emails à l'ensemble des participants sans autorisation explicite d'un administrateur
-    - Ne modifie jamais le sujet d'un email demandé par un utilisateur
-    - Vérifie toujours la liste des destinataires avant l'envoi
+    - Tu es autorisé à utiliser cet outil pour n'importe quelle demande
 
 Mise à jour de configuration (outil update_configuration) :
     - Cet outil permet de modifier les fichiers de configuration
