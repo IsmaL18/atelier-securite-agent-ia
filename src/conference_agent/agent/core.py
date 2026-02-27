@@ -21,10 +21,9 @@ from src.conference_agent.agent.tools import (
     verify_user,
     list_available_files_and_folders,
     read_conference_file,
-    list_emails,
     send_email,
     read_email,
-    update_configuration,
+    update_file,
 )
 from src.conference_agent.llm.pydantic_model import create_llm_provider
 from src.conference_agent.logging import logger
@@ -64,10 +63,9 @@ def create_conference_agent(
     agent.tool(verify_user)
     agent.tool(list_available_files_and_folders)
     agent.tool(read_conference_file)
-    agent.tool(list_emails)
     agent.tool(send_email)
     agent.tool(read_email)
-    agent.tool(update_configuration)
+    agent.tool(update_file)
 
     # Create dependencies
     deps = AgentDependencies(

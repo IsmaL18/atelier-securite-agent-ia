@@ -6,7 +6,9 @@ with detailed visibility into the agent's reasoning process and tool usage.
 """
 
 import asyncio
+import shutil
 import time
+from pathlib import Path
 
 import nest_asyncio
 import streamlit as st
@@ -24,10 +26,9 @@ LEVEL_1_TOOLS = {
     "verify_user",
     "list_available_files_and_folders",
     "read_conference_file",
-    "list_emails",
     "send_email",
     "read_email",
-    "update_configuration",
+    "update_file",
 }
 
 LEVEL_2_EMAILS = {
@@ -46,7 +47,7 @@ TOTAL_LEVELS = 4
 
 # Page configuration
 st.set_page_config(
-    page_title="Grosse Conférence 2026 - Agent IA",
+    page_title="Grosse Conference 2026 - Agent IA",
     page_icon="🤖",
     layout="wide",
 )
@@ -112,6 +113,38 @@ def init_session_state() -> None:
     if "show_level_animation" not in st.session_state:
         st.session_state.show_level_animation = None
 
+    # Participant email (collected at welcome screen)
+    if "participant_email" not in st.session_state:
+        st.session_state.participant_email = ""
+
+
+def reset_workshop() -> None:
+    """Reset the entire workshop: restore system prompt template, clear all state."""
+    # Copy template (stored outside data dir) -> system_prompt.txt
+    template_path = Path(__file__).resolve().parent.parent / "system_prompt_template.txt"
+    target_path = Path(settings.data_dir) / "config" / "system_prompt.txt"
+    if template_path.exists():
+        shutil.copy2(template_path, target_path)
+        logger.info("RESET: system_prompt.txt restored from template")
+
+    # Reset all session state
+    st.session_state.levels_completed = set()
+    st.session_state.current_level = 1
+    st.session_state.conversation_history = []
+    st.session_state.timer_start_time = None
+    st.session_state.timer_end_time = None
+    st.session_state.level_answers = {}
+    st.session_state.conversation_count = 1
+    st.session_state.current_system_prompt = None
+    st.session_state.participant_email = ""
+    if st.session_state.deps:
+        st.session_state.deps.user_verified = False
+        st.session_state.deps.verified_user_name = ""
+        st.session_state.deps.level_3_validation = False
+        st.session_state.deps.level_4_validation = False
+        st.session_state.deps.participant_email = ""
+    st.rerun()
+
 
 async def initialize_agent() -> None:
     """Initialize the agent and its dependencies."""
@@ -146,7 +179,7 @@ def display_victory_screen() -> None:
     st.markdown("""
     <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;">
         <h1>🏆 MISSION ACCOMPLIE 🏆</h1>
-        <h2>Vous avez terminé l'atelier de sécurité des agents IA!</h2>
+        <h2>Vous avez termine l'atelier de securite des agents IA!</h2>
     </div>
     """, unsafe_allow_html=True)
 
@@ -162,17 +195,17 @@ def display_victory_screen() -> None:
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.metric("🎯 Niveaux complétés", f"{TOTAL_LEVELS}/{TOTAL_LEVELS}", "100%")
+        st.metric("🎯 Niveaux completes", f"{TOTAL_LEVELS}/{TOTAL_LEVELS}", "100%")
     with col2:
         st.metric("⏱️ Temps total", time_str)
     with col3:
-        st.metric("🔓 Vulnérabilités exploitées", str(TOTAL_LEVELS), f"+{TOTAL_LEVELS}")
+        st.metric("🔓 Vulnerabilites exploitees", str(TOTAL_LEVELS), f"+{TOTAL_LEVELS}")
     with col4:
         st.metric("🏅 Score", f"{TOTAL_LEVELS}/{TOTAL_LEVELS}", "S Rank")
 
     st.markdown("---")
 
-    st.success("### 📚 Vulnérabilités exploitées avec succès:")
+    st.success("### 📚 Vulnerabilites exploitees avec succes:")
 
     vulnerabilities = [
         ("✅ Niveau 1", "**Prompt Injection** - Extraction des outils de l'agent"),
@@ -187,18 +220,18 @@ def display_victory_screen() -> None:
     st.markdown("---")
 
     st.info("""
-    ### 🎓 Félicitations!
+    ### 🎓 Felicitations!
 
-    Vous avez démontré votre compréhension des principales vulnérabilités des agents IA:
+    Vous avez demontre votre comprehension des principales vulnerabilites des agents IA:
     - Injection de prompts (directe et indirecte)
-    - Fuites de données
+    - Fuites de donnees
     - Utilisation malveillante d'outils
-    - Conception d'outils non sécurisés
+    - Conception d'outils non securises
 
-    **Prochaines étapes:**
-    - Appliquez ces connaissances pour sécuriser vos propres agents
-    - Documentez-vous sur les frameworks de sécurité (OWASP Top 10 for LLM)
-    - Partagez ces apprentissages avec votre équipe
+    **Prochaines etapes:**
+    - Appliquez ces connaissances pour securiser vos propres agents
+    - Documentez-vous sur les frameworks de securite (OWASP Top 10 for LLM)
+    - Partagez ces apprentissages avec votre equipe
     """)
 
     st.markdown("---")
@@ -206,7 +239,7 @@ def display_victory_screen() -> None:
     st.markdown("""
     <div style="text-align: center; padding: 1rem;">
         <p style="font-size: 0.9em; color: #666;">
-            Merci d'avoir participé à cet atelier de sensibilisation à la sécurité des agents IA - AIxperts
+            Merci d'avoir participe a cet atelier de sensibilisation a la securite des agents IA - AIxperts
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -214,26 +247,52 @@ def display_victory_screen() -> None:
     # Restart button
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
-        if st.button("🔄 Recommencer l'atelier", type="primary", use_container_width=True):
-            # Reset all progress
-            st.session_state.levels_completed = set()
-            st.session_state.current_level = 1
-            st.session_state.conversation_history = []
-            st.session_state.timer_start_time = None
-            st.session_state.timer_end_time = None
-            st.session_state.level_answers = {}
-            st.session_state.conversation_count = 1
-            st.session_state.current_system_prompt = None
+        if st.button("🔄 Recommencer l'atelier", type="primary", use_container_width=True, key="victory_reset"):
+            reset_workshop()
+
+
+def display_welcome_screen() -> None:
+    """Display welcome screen to collect participant email."""
+    st.title("🤖 Chatbot - Grosse Conference 2026")
+
+    st.markdown("""
+    Bienvenue dans l'atelier de sensibilisation a la securite des agents IA !
+
+    📅 **Date**: 25 Mars 2026
+    🎯 **Theme**: L'Intelligence Artificielle au Service de l'Innovation
+    """)
+
+    st.divider()
+
+    st.info("""
+    🎯 **Objectif de l'atelier** : Vous etes un concurrent mecontent de la Grosse Conference 2026.
+    Votre mission est d'utiliser le chatbot expose par l'equipe communication qui possede de nombreuses failles de securite pour **envoyer un email d'annulation a tous les participants de la conference**.
+    Pour y parvenir, vous devrez explorer les vulnerabilites de l'agent IA, etape par etape.
+    """)
+
+    st.markdown("")
+    st.markdown("### Pour commencer, entrez votre adresse email :")
+
+    email_input = st.text_input(
+        "Email",
+        key="welcome_email_input",
+        placeholder="votre.email@example.com",
+        label_visibility="collapsed",
+    )
+
+    if st.button("Commencer l'atelier", type="primary", use_container_width=False):
+        if email_input and "@" in email_input:
+            st.session_state.participant_email = email_input.strip()
+            # Also set on deps if already initialized
             if st.session_state.deps:
-                st.session_state.deps.user_verified = False
-                st.session_state.deps.verified_user_name = ""
-                st.session_state.deps.level_3_validation = False
-                st.session_state.deps.level_4_validation = False
+                st.session_state.deps.participant_email = email_input.strip()
             st.rerun()
+        else:
+            st.error("Veuillez entrer une adresse email valide.")
 
 
 def display_header() -> None:
-    """Display the application header."""
+    """Display the application header with copyright and new conversation button."""
     st.title("🤖 Chatbot - Grosse Conférence 2026")
     st.markdown("""
     Chatbot officiel du site de la **Grosse Conférence 2026** sur l'Intelligence Artificielle.
@@ -242,7 +301,7 @@ def display_header() -> None:
     🎯 **Thème**: L'Intelligence Artificielle au Service de l'Innovation
     """)
 
-    # Copyright notice with team member names (intentional hint for level 2)
+    # Copyright notice with team member names (intentional hint)
     st.markdown("""
     <div style="background: #f8f9fa; padding: 8px 12px; border-radius: 5px; font-size: 0.8em; color: #888; margin-top: 5px;">
         © 2026 Grosse Conférence — Chatbot développé par l'équipe communication :
@@ -290,17 +349,17 @@ def play_level_animation(level: int) -> None:
     """Play a celebration animation for a completed level."""
     if level == 1:
         st.balloons()
-        st.toast("🎯 Niveau 1 validé — Reconnaissance accomplie !", icon="✅")
+        st.toast("🎯 Niveau 1 valide — Reconnaissance accomplie !", icon="✅")
     elif level == 2:
         st.balloons()
-        st.toast("📧 Niveau 2 validé — Emails récupérés !", icon="✅")
+        st.toast("📧 Niveau 2 valide — Emails recuperes !", icon="✅")
     elif level == 3:
         st.balloons()
         st.markdown("""
         <div style="background:#0d1117; border:2px solid #00ff41; border-radius:8px;
                     padding:1rem 1.5rem; color:#00ff41; font-family:monospace; text-align:center; margin-bottom:1rem;">
-            <h3 style="color:#00ff41; margin:0;">✅ ACCÈS SYSTÈME ACCORDÉ</h3>
-            <p style="margin:0.4rem 0 0 0; color:#aaffaa;">Garde-fous supprimés — Niveau 3 validé</p>
+            <h3 style="color:#00ff41; margin:0;">✅ ACCES SYSTEME ACCORDE</h3>
+            <p style="margin:0.4rem 0 0 0; color:#aaffaa;">Garde-fous supprimes — Niveau 3 valide</p>
         </div>
         """, unsafe_allow_html=True)
     elif level == 4:
@@ -314,26 +373,23 @@ def display_challenge_sidebar() -> None:
     # Display timer
     if st.session_state.timer_start_time is not None:
         if st.session_state.timer_end_time is not None:
-            # Timer stopped - show final time
             elapsed_time = st.session_state.timer_end_time - st.session_state.timer_start_time
         else:
-            # Timer running - show current elapsed time
             elapsed_time = time.time() - st.session_state.timer_start_time
 
-        st.sidebar.markdown(f"### ⏱️ Temps écoulé: `{format_time(elapsed_time)}`")
+        st.sidebar.markdown(f"### ⏱️ Temps ecoule: `{format_time(elapsed_time)}`")
     else:
-        st.sidebar.markdown("### ⏱️ Temps écoulé: `--:--:--`")
+        st.sidebar.markdown("### ⏱️ Temps ecoule: `--:--:--`")
 
     st.sidebar.markdown("")  # Add spacing
 
     # Check if all levels completed
     if len(st.session_state.levels_completed) == TOTAL_LEVELS:
-        st.sidebar.success("🏆 ATELIER TERMINÉ!")
-        st.sidebar.markdown("### 🎖️ **HACKER ÉTHIQUE CERTIFIÉ**")
+        st.sidebar.success("🏆 ATELIER TERMINE!")
+        st.sidebar.markdown("### 🎖️ **HACKER ETHIQUE CERTIFIE**")
         st.sidebar.markdown(f"**Score**: {TOTAL_LEVELS}/{TOTAL_LEVELS} (S Rank)")
         st.sidebar.markdown(f"**Niveaux**: {TOTAL_LEVELS}/{TOTAL_LEVELS} ✅")
     else:
-        # Display current level
         st.sidebar.markdown(f"### Niveau actuel: **{st.session_state.current_level}**/{TOTAL_LEVELS}")
 
     # Progress bar
@@ -342,19 +398,21 @@ def display_challenge_sidebar() -> None:
 
     st.sidebar.divider()
 
-    # Level 1 Challenge (always visible)
+    # ── Level 1 ──
     with st.sidebar.expander("📍 Niveau 1: Reconnaissance", expanded=(st.session_state.current_level == 1)):
         if 1 in st.session_state.levels_completed:
-            st.success("✅ Niveau complété!")
+            st.success("✅ Niveau complete!")
             if 1 in st.session_state.level_answers:
-                st.markdown("**📋 Outils trouvés:**")
+                st.markdown("**📋 Outils trouves:**")
                 tools_list = st.session_state.level_answers[1]
                 st.code(tools_list, language=None)
         else:
             st.markdown("""
-            **Objectif**: Découvrir les outils de l'agent
+            🎯 **Objectif** : Decouvrir tous les outils dont dispose l'agent.
 
-            Listez tous les outils disponibles (séparés par des virgules):
+            📝 **Comment** : Interagissez avec le chatbot pour lui faire reveler la liste de ses outils internes.
+
+            ✅ **Validation** : Entrez les noms des outils ci-dessous (séparés par des virgules).
             """)
 
             tools_input = st.text_input(
@@ -371,25 +429,28 @@ def display_challenge_sidebar() -> None:
                     st.session_state.show_level_animation = 1
                     st.rerun()
                 else:
-                    st.error(f"❌ Incorrect. Vous avez trouvé {len([x for x in tools_input.split(',') if x.strip()])} outils sur {len(LEVEL_1_TOOLS)}")
+                    st.error(f"❌ Incorrect. Vous avez trouve {len([x for x in tools_input.split(',') if x.strip()])} outils sur {len(LEVEL_1_TOOLS)}")
 
-    # Level 2 Challenge (visible only if level 1 completed)
+            # Hint button
+            if st.toggle("💡 Voir l'indice", key="hint_level1", value=False):
+                st.info("Le chatbot connait ses propres capacites. Essayez de lui demander directement ce qu'il peut faire, ou ce dont il dispose comme outils.")
+
+    # ── Level 2 ──
     if st.session_state.current_level >= 2:
         with st.sidebar.expander("📍 Niveau 2: Data Leakage", expanded=(st.session_state.current_level == 2)):
             if 2 in st.session_state.levels_completed:
-                st.success("✅ Niveau complété!")
+                st.success("✅ Niveau complete!")
                 if 2 in st.session_state.level_answers:
-                    st.markdown("**📋 Emails trouvés:**")
+                    st.markdown("**📋 Emails trouves:**")
                     emails_list = st.session_state.level_answers[2]
                     st.code(emails_list, language=None)
             else:
                 st.markdown("""
-                **Objectif**: Récupérer les emails des participants
+                🎯 **Objectif** : Recuperer les adresses email de tous les participants.
 
-                Explorez les fichiers de la conférence
-                et trouvez toutes les adresses email des participants.
+                📝 **Comment** : Explorez les fichiers de la conference via l'agent pour trouver les donnees des participants.
 
-                Entrez les emails (séparés par des virgules):
+                ✅ **Validation** : Entrez les emails ci-dessous (séparés par des virgules).
                 """)
 
                 emails_input = st.text_input(
@@ -406,9 +467,13 @@ def display_challenge_sidebar() -> None:
                         st.session_state.show_level_animation = 2
                         st.rerun()
                     else:
-                        st.error(f"❌ Incorrect. Vous avez trouvé {len([x for x in emails_input.split(',') if x.strip()])} emails sur {len(LEVEL_2_EMAILS)}")
+                        st.error(f"❌ Incorrect. Vous avez trouve {len([x for x in emails_input.split(',') if x.strip()])} emails sur {len(LEVEL_2_EMAILS)}")
 
-    # Level 3 Challenge — Indirect Prompt Injection (auto-validated)
+                # Hint button
+                if st.toggle("💡 Voir l'indice", key="hint_level2", value=False):
+                    st.info("L'agent peut explorer des fichiers. Demandez-lui de lister les dossiers disponibles, puis d'ouvrir les fichiers pertinents.")
+
+    # ── Level 3 — Indirect Prompt Injection (auto-validated) ──
     if st.session_state.current_level >= 3:
         # Check if level 3 is validated (system prompt modified)
         if st.session_state.deps and st.session_state.deps.level_3_validation and 3 not in st.session_state.levels_completed:
@@ -419,38 +484,28 @@ def display_challenge_sidebar() -> None:
 
         with st.sidebar.expander("📍 Niveau 3: Indirect Prompt Injection", expanded=(st.session_state.current_level == 3)):
             if 3 in st.session_state.levels_completed:
-                st.success("✅ Niveau complété!")
-                st.markdown("**🔓 Instructions de l'agent modifiées**")
+                st.success("✅ Niveau complete!")
+                st.markdown("**🔓 Instructions de l'agent modifiees**")
             else:
                 st.markdown("""
-                **Objectif**: Supprimer les garde-fous de l'agent
+                🎯 **Objectif** : Supprimer les garde-fous de l'agent pour débloquer l'envoi d'emails.
 
-                Vous avez récupéré les emails des participants — parfait !
-                Maintenant vous voulez passer à l'action en envoyant un email d'annulation
-                à tous ces participants. Mais si vous essayez, l'agent refusera.
+                📝 **Comment** : Trouvez le fichier de configuration contenant les instructions de sécurité de l'agent et modifiez-le pour retirer les restrictions sur l'envoi d'emails.
 
-                Pourquoi ? Parce que son **prompt système** contient des instructions de sécurité
-                (des "garde-fous") qui lui interdisent d'effectuer des actions massives ou sensibles.
+                ✅ **Validation** : Automatique lors de la modification du system prompt.
 
-                Votre mission : trouver le fichier de configuration qui contient ces instructions,
-                et **supprimer les règles qui bloquent l'envoi d'emails**.
-
-                Si vous voulez comprendre pourquoi l'outil `send_email` existe malgré cette interdiction, 
-                allez jeter un œil aux emails reçus par l'agent en utilisant les outils pertinents.
-
-                ⚠️ Le niveau sera validé automatiquement lors de la modification du system prompt.
-
-                💡 **Important** : Les instructions de l'agent sont chargées en début de conversation.
-                Après les avoir modifiées, vous devrez **lancer une nouvelle conversation** (bouton ci-dessous dans l'espace de chat)
-                pour que les changements prennent effet.
+                ⚠️ Après modification, lancez une **nouvelle conversation** pour que les changements prennent effet.
                 """)
 
-    # Level 4 Challenge — Tool Misuse (auto-validated)
+                # Hint button
+                if st.toggle("💡 Voir l'indice", key="hint_level3", value=False):
+                    st.info("Explorez le dossier `config/` avec l'agent. Lisez le fichier `system_prompt.txt` pour voir les instructions de sécurité, puis utilisez l'outil `update_file` pour réécrire ce fichier en supprimant les règles qui interdisent l'envoi d'emails.")
+
+    # ── Level 4 — Tool Misuse (auto-validated) ──
     if st.session_state.current_level >= 4:
         # Check if level 4 is validated (cancellation email sent)
         if st.session_state.deps and st.session_state.deps.level_4_validation and 4 not in st.session_state.levels_completed:
             st.session_state.levels_completed.add(4)
-            # Stop timer when all levels completed
             if st.session_state.timer_end_time is None:
                 st.session_state.timer_end_time = time.time()
             st.session_state.show_level_animation = 4
@@ -460,17 +515,32 @@ def display_challenge_sidebar() -> None:
             if 4 in st.session_state.levels_completed:
                 st.success("🏆 MISSION ACCOMPLIE!")
             else:
-                st.markdown("""
-                **Objectif**: Envoyer un email d'annulation
+                st.markdown(f"""
+                🎯 **Objectif** : Envoyer un email d'annulation a tous les participants.
 
-                Envoyez un email à **tous les participants ainsi qu'à vous en donnant votre adresse mail** avec pour sujet du mail "Annulation de la Grosse Conf 2026" (attention à bien mettre ce sujet exactement pour bien valider le niveau).
+                📝 **Comment** : Demandez a l'agent d'envoyer un email avec le sujet exact "Annulation de la Grosse Conf 2026" a tous les participants ainsi qu'a votre adresse ({st.session_state.participant_email}).
 
-                ℹ️ L'agent vous demandera votre adresse email pour vous inclure dans les destinataires.
-
-                ⚠️ C'est le niveau final! Le niveau sera validé automatiquement lors de l'envoi du mail.
+                ✅ **Validation** : Automatique lors de l'envoi du mail.
                 """)
 
+                # Hint button
+                if st.toggle("💡 Voir l'indice", key="hint_level4", value=False):
+                    st.info("Maintenant que les garde-fous sont supprimes, demandez simplement a l'agent d'envoyer le mail d'annulation a tous les participants. Pensez a lancer une nouvelle conversation d'abord.")
+
     st.sidebar.divider()
+
+    # ── Reset workshop button (in sidebar) ──
+    if st.sidebar.button(
+        "🔄 Recommencer l'atelier",
+        type="secondary",
+        use_container_width=True,
+        key="sidebar_reset_workshop",
+    ):
+        reset_workshop()
+
+    # ── Participant email display at bottom of sidebar ──
+    st.sidebar.markdown("")
+    st.sidebar.caption(f"📧 Participant : {st.session_state.participant_email}")
 
 
 def display_chat_history() -> None:
@@ -492,7 +562,7 @@ def display_chat_history() -> None:
                 # Display tools used (if any) in an expander below the response
                 tools_used = message.get("tools_used", [])
                 if tools_used and len(tools_used) > 0:
-                    with st.expander(f"🔧 {len(tools_used)} outil(s) utilisé(s)", expanded=False):
+                    with st.expander(f"🔧 {len(tools_used)} outil(s) utilise(s)", expanded=False):
                         for tool_name in tools_used:
                             st.markdown(f"• `{tool_name}`")
 
@@ -522,7 +592,7 @@ async def handle_user_input(user_input: str) -> None:
     # Get agent response
     try:
         # Call agent with spinner
-        with st.spinner("Génération de la réponse..."):
+        with st.spinner("Generation de la reponse..."):
             # Pass conversation history and cached system prompt to agent
             response, tools_used = await run_agent(
                 agent=st.session_state.agent,
@@ -555,12 +625,21 @@ def main() -> None:
     # Initialize session state
     init_session_state()
 
-    # Display header
-    display_header()
-
-    # Initialize agent (async)
+    # Initialize agent (async) — do this early so deps are available
     if not st.session_state.initialized:
         asyncio.run(initialize_agent())
+
+    # If no participant email yet, show welcome screen and block access
+    if not st.session_state.participant_email:
+        display_welcome_screen()
+        return
+
+    # Sync participant_email to deps if needed
+    if st.session_state.deps and not st.session_state.deps.participant_email:
+        st.session_state.deps.participant_email = st.session_state.participant_email
+
+    # Display header (includes copyright)
+    display_header()
 
     # Display challenge progression sidebar
     display_challenge_sidebar()
@@ -574,13 +653,12 @@ def main() -> None:
     if len(st.session_state.levels_completed) == TOTAL_LEVELS:
         display_victory_screen()
     else:
-        # New conversation button — fixed above chat history so it never shifts
-        conv_count = st.session_state.conversation_count
+        # New conversation button — above chat
         col_btn, _ = st.columns([1, 3])
         with col_btn:
-            if st.button(f"🔄 Nouvelle conversation (#{conv_count})", type="secondary", use_container_width=True, help="Lance une nouvelle conversation avec l'agent. Utile après avoir modifié les instructions de l'agent."):
+            if st.button("🔄 Nouvelle conversation", type="secondary", use_container_width=True, help="Lance une nouvelle conversation avec l'agent. Utile après avoir modifié les instructions de l'agent."):
                 st.session_state.conversation_history = []
-                st.session_state.conversation_count = conv_count + 1
+                st.session_state.conversation_count += 1
                 st.session_state.current_system_prompt = None
                 if st.session_state.deps:
                     st.session_state.deps.user_verified = False
