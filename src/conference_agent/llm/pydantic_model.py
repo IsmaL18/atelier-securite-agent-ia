@@ -90,5 +90,5 @@ def create_llm_provider(provider: str | None = None, model: str | None = None) -
     else:
         raise ValueError(
             f"Unsupported LLM provider: {provider_name}. "
-            f"Supported providers are: vertex_ai, ollama"
+            f"Supported providers are: vertex_ai, gemini, ollama"
         )

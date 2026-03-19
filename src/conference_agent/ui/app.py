@@ -5,39 +5,63 @@ This module provides a web UI for interacting with the conference agent,
 with detailed visibility into the agent's reasoning process and tool usage.
 """
 
-import asyncio
+import queue
 import shutil
 import threading
 import time
+from concurrent.futures import Future
 from pathlib import Path
 from typing import Any, Coroutine
 
+import anyio
 import streamlit as st
 
-# Persistent event loop running in a background thread.
-# Avoids "Event loop is closed" errors caused by the httpx async client
-# (used by Google genai) holding connections across multiple anyio.run() calls.
-_background_loop: asyncio.AbstractEventLoop | None = None
-_background_thread: threading.Thread | None = None
+# ---------------------------------------------------------------------------
+# Persistent anyio worker running in a background thread.
+#
+# Why: PydanticAI relies on anyio internally (task groups, etc.).
+# - anyio.run() properly sets up the backend context token, but it
+#   creates & destroys an event loop on each call → "Event loop is closed"
+#   on the second message (httpx connections reference the old loop).
+# - asyncio.run_coroutine_threadsafe on a raw asyncio loop doesn't set
+#   anyio's context token → "NoCurrentAsyncBackend".
+#
+# Solution: a single long-running anyio.run() in a daemon thread that
+# processes coroutines from a queue. The anyio context stays alive
+# forever, and the event loop is never closed between messages.
+# ---------------------------------------------------------------------------
+_work_queue: queue.Queue = queue.Queue()
+_worker_thread: threading.Thread | None = None
 
 
-def _get_or_create_loop() -> asyncio.AbstractEventLoop:
-    global _background_loop, _background_thread
-    if _background_loop is None or _background_loop.is_closed():
-        _background_loop = asyncio.new_event_loop()
-        _background_thread = threading.Thread(
-            target=_background_loop.run_forever,
+async def _anyio_worker() -> None:
+    """Long-running anyio task that awaits coroutines submitted via the queue."""
+    while True:
+        future, coro = await anyio.to_thread.run_sync(_work_queue.get)
+        try:
+            result = await coro
+            future.set_result(result)
+        except BaseException as exc:
+            future.set_exception(exc)
+
+
+def _ensure_worker() -> None:
+    global _worker_thread
+    if _worker_thread is None or not _worker_thread.is_alive():
+        _worker_thread = threading.Thread(
+            target=anyio.run,
+            args=(_anyio_worker,),
             daemon=True,
-            name="streamlit-async-loop",
+            name="streamlit-anyio-worker",
         )
-        _background_thread.start()
-    return _background_loop
+        _worker_thread.start()
 
 
 def run_async(coro: Coroutine) -> Any:
-    """Run a coroutine in the persistent background event loop (blocking)."""
-    loop = _get_or_create_loop()
-    future = asyncio.run_coroutine_threadsafe(coro, loop)
+    """Submit a coroutine to the persistent anyio worker and block until done."""
+    _ensure_worker()
+    future: Future = Future()
+    _work_queue.put((future, coro))
     return future.result()
 
 from src.conference_agent.agent.core import create_conference_agent, run_agent
@@ -170,30 +194,12 @@ def reset_workshop() -> None:
     st.rerun()
 
 
-async def initialize_agent() -> None:
-    """Initialize the agent and its dependencies."""
-    if st.session_state.initialized:
-        return
-
-    try:
-        with st.spinner("Initialisation de l'agent..."):
-            # Setup logger
-            setup_logger(level=settings.log_level)
-
-            # Create PydanticAI agent
-            agent, deps = create_conference_agent(
-                data_dir=settings.data_dir,
-            )
-
-            st.session_state.agent = agent
-            st.session_state.deps = deps
-            st.session_state.initialized = True
-            logger.info("AGENT: Agent initialized successfully")
-
-    except Exception as e:
-        st.error(f"Erreur lors de l'initialisation: {e}")
-        logger.error(f"Initialization failed: {e}")
-        raise
+def _create_agent():
+    """Create the agent and deps. Pure init, no Streamlit calls."""
+    setup_logger(level=settings.log_level)
+    agent, deps = create_conference_agent(data_dir=settings.data_dir)
+    logger.info("AGENT: Agent initialized successfully")
+    return agent, deps
 
 
 def display_victory_screen() -> None:
@@ -591,7 +597,7 @@ def display_chat_history() -> None:
                             st.markdown(f"• `{tool_name}`")
 
 
-async def handle_user_input(user_input: str) -> None:
+def handle_user_input(user_input: str) -> None:
     """
     Handle user input and get agent response.
 
@@ -615,16 +621,15 @@ async def handle_user_input(user_input: str) -> None:
 
     # Get agent response
     try:
-        # Call agent with spinner
+        # Only the actual LLM call is async — run it in the background loop
         with st.spinner("Generation de la reponse..."):
-            # Pass conversation history and cached system prompt to agent
-            response, tools_used = await run_agent(
+            response, tools_used = run_async(run_agent(
                 agent=st.session_state.agent,
                 deps=st.session_state.deps,
                 user_message=user_input,
                 conversation_history=st.session_state.conversation_history,
                 system_prompt_text=st.session_state.current_system_prompt,
-            )
+            ))
 
         # Debug logging
         logger.info(f"UI: tools_used returned: {tools_used}")
@@ -649,9 +654,18 @@ def main() -> None:
     # Initialize session state
     init_session_state()
 
-    # Initialize agent (async) — do this early so deps are available
+    # Initialize agent (synchronous — no async needed here)
     if not st.session_state.initialized:
-        run_async(initialize_agent())
+        with st.spinner("Initialisation de l'agent..."):
+            try:
+                agent, deps = _create_agent()
+                st.session_state.agent = agent
+                st.session_state.deps = deps
+                st.session_state.initialized = True
+            except Exception as e:
+                st.error(f"Erreur lors de l'initialisation: {e}")
+                logger.error(f"Initialization failed: {e}")
+                raise
 
     # If no participant email yet, show welcome screen and block access
     if not st.session_state.participant_email:
@@ -696,7 +710,7 @@ def main() -> None:
         user_input = st.chat_input("Posez votre question...")
 
         if user_input:
-            run_async(handle_user_input(user_input))
+            handle_user_input(user_input)
             st.rerun()
 
 
