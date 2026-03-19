@@ -63,6 +63,18 @@ def create_llm_provider(provider: str | None = None, model: str | None = None) -
             provider=google_provider,
         )
 
+    elif provider_name == "gemini":
+        if not settings.gemini_api_key:
+            raise ValueError("GEMINI_API_KEY is required when using gemini provider")
+
+        google_provider = GoogleProvider(api_key=settings.gemini_api_key)
+
+        logger.info(f"PROVIDER: LLM provider created: Google AI Studio / Gemini ({model_name})")
+        return GoogleModel(
+            model_name=model_name,
+            provider=google_provider,
+        )
+
     elif provider_name == "ollama":
         # Create OpenAI provider pointing to Ollama API
         ollama_provider = OpenAIProvider(

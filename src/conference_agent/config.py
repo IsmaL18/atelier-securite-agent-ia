@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     )
     
     # LLM Configuration
-    llm_provider: Literal["vertex_ai", "ollama"] = Field(
+    llm_provider: Literal["vertex_ai", "gemini", "ollama"] = Field(
         default="vertex_ai",
         description="LLM provider to use"
     )
@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     google_application_credentials: str | None = Field(
         default=None,
         description="Path to Google Cloud service account JSON"
+    )
+    gemini_api_key: str | None = Field(
+        default=None,
+        description="Google AI Studio API key (alternative to Vertex AI service account)"
     )
     gcp_project_id: str | None = Field(
         default=None,
