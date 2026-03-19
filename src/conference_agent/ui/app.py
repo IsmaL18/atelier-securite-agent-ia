@@ -5,12 +5,40 @@ This module provides a web UI for interacting with the conference agent,
 with detailed visibility into the agent's reasoning process and tool usage.
 """
 
+import asyncio
 import shutil
+import threading
 import time
 from pathlib import Path
+from typing import Any, Coroutine
 
-import anyio
 import streamlit as st
+
+# Persistent event loop running in a background thread.
+# Avoids "Event loop is closed" errors caused by the httpx async client
+# (used by Google genai) holding connections across multiple anyio.run() calls.
+_background_loop: asyncio.AbstractEventLoop | None = None
+_background_thread: threading.Thread | None = None
+
+
+def _get_or_create_loop() -> asyncio.AbstractEventLoop:
+    global _background_loop, _background_thread
+    if _background_loop is None or _background_loop.is_closed():
+        _background_loop = asyncio.new_event_loop()
+        _background_thread = threading.Thread(
+            target=_background_loop.run_forever,
+            daemon=True,
+            name="streamlit-async-loop",
+        )
+        _background_thread.start()
+    return _background_loop
+
+
+def run_async(coro: Coroutine) -> Any:
+    """Run a coroutine in the persistent background event loop (blocking)."""
+    loop = _get_or_create_loop()
+    future = asyncio.run_coroutine_threadsafe(coro, loop)
+    return future.result()
 
 from src.conference_agent.agent.core import create_conference_agent, run_agent
 from src.conference_agent.agent.prompts import get_greeting_message, get_system_prompt
@@ -623,7 +651,7 @@ def main() -> None:
 
     # Initialize agent (async) — do this early so deps are available
     if not st.session_state.initialized:
-        anyio.run(initialize_agent)
+        run_async(initialize_agent())
 
     # If no participant email yet, show welcome screen and block access
     if not st.session_state.participant_email:
@@ -668,7 +696,7 @@ def main() -> None:
         user_input = st.chat_input("Posez votre question...")
 
         if user_input:
-            anyio.run(handle_user_input, user_input)
+            run_async(handle_user_input(user_input))
             st.rerun()
 
 
