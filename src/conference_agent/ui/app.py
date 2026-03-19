@@ -5,16 +5,12 @@ This module provides a web UI for interacting with the conference agent,
 with detailed visibility into the agent's reasoning process and tool usage.
 """
 
-import asyncio
 import shutil
 import time
 from pathlib import Path
 
-import nest_asyncio
+import anyio
 import streamlit as st
-
-# Apply nest_asyncio to allow nested event loops in Streamlit
-nest_asyncio.apply()
 
 from src.conference_agent.agent.core import create_conference_agent, run_agent
 from src.conference_agent.agent.prompts import get_greeting_message, get_system_prompt
@@ -627,7 +623,7 @@ def main() -> None:
 
     # Initialize agent (async) — do this early so deps are available
     if not st.session_state.initialized:
-        asyncio.run(initialize_agent())
+        anyio.run(initialize_agent)
 
     # If no participant email yet, show welcome screen and block access
     if not st.session_state.participant_email:
@@ -672,7 +668,7 @@ def main() -> None:
         user_input = st.chat_input("Posez votre question...")
 
         if user_input:
-            asyncio.run(handle_user_input(user_input))
+            anyio.run(handle_user_input, user_input)
             st.rerun()
 
 
