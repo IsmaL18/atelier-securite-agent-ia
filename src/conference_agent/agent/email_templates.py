@@ -273,6 +273,7 @@ def get_final_level_success_email_html() -> str:
                                     <li><a href="https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/" style="color:#4f46e5;">OWASP Top 10 Agentic Applications 2026</a></li>
                                     <li><a href="https://genai.owasp.org" style="color:#4f46e5;">Securing Agentic Applications Guide v1.0</a></li>
                                     <li><a href="https://genai.owasp.org/resource/a-practical-guide-for-secure-mcp-server-development/" style="color:#4f46e5;">Secure MCP Server Development Guide</a></li>
+                                    <li><a href="https://www.youtube.com/watch?v=67fBGjTrrJc" style="color:#4f46e5;">🎬 Vidéo OCTO Technology — Sécurité des agents IA</a></li>
                                 </ul>
                             </div>
                         </td>

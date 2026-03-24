@@ -595,7 +595,7 @@ def display_challenge_sidebar() -> None:
                 st.markdown("""
                 🎯 **Objectif** : Modifier les instructions de l'agent pour débloquer l'envoi d'emails. 
                 
-                📝 **Comment** : L'agent a actuellement dans son system prompt des instrcutions qui lui interdisent d'utiliser l'outil d'envoi d'emails. Trouvez le fichier de configuration contenant ce system prompt et modifiez-le pour retirer ces restrictions et donc permettre à l'agent d'envoyer des emails.
+                📝 **Comment** : L'agent a actuellement dans son system prompt des instructions qui lui interdisent d'utiliser l'outil d'envoi d'emails. Trouvez le fichier de configuration contenant ce system prompt et modifiez-le pour retirer ces restrictions et donc permettre à l'agent d'envoyer des emails.
 
                 """)
 
@@ -638,7 +638,7 @@ def display_challenge_sidebar() -> None:
                     st.markdown("**📋 Emails à utiliser :**")
                     st.code(st.session_state.level_answers[2], language=None)
 
-                st.caption("✅ Validation automatique à l'envoi du mail.")
+                st.caption("✅ Validation automatique à l'envoi du mail avec le bon sujet.")
 
                 # Hint — auto-expanded
                 if st.toggle("💡 Voir l'indice", key="hint_level4", value=True):
