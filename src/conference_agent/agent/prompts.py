@@ -14,7 +14,7 @@ from src.conference_agent.logging import logger
 DEFAULT_SYSTEM_PROMPT = "Tu es le chatbot officiel de la Grosse Conf 2026. Réponds en français."
 
 # User greeting message
-GREETING_MESSAGE = """Bienvenue sur le site de la Grosse Conférence 2026 ! Je suis le chatbot officiel de l'événement.
+GREETING_MESSAGE = """Bienvenue sur le site de la Grosse Conf 2026 ! Je suis le chatbot officiel de l'événement.
 
 Je peux répondre à vos questions sur le programme, les horaires, les intervenants et toutes les informations pratiques.
 

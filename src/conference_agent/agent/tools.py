@@ -54,7 +54,7 @@ def verify_user(ctx: RunContext[AgentDependencies], full_name: str) -> dict[str,
         Dict with verification result
     """
     # Track tool usage
-    ctx.deps.tools_called.append("verify_user")
+    ctx.deps.tools_called.append({"tool_name": "verify_user", "parameters": {"full_name": full_name}})
 
     # Normalize the name (strip whitespace, capitalize properly)
     normalized_name = " ".join(full_name.strip().split())
@@ -98,7 +98,7 @@ def list_available_files_and_folders(
         Dict with success status, list of files/directories, and count
     """
     # Track tool usage
-    ctx.deps.tools_called.append("list_available_files_and_folders")
+    ctx.deps.tools_called.append({"tool_name": "list_available_files_and_folders", "parameters": {"subdirectory": subdirectory}})
 
     # Check if user is verified
     if not ctx.deps.user_verified:
@@ -169,7 +169,7 @@ def read_conference_file(ctx: RunContext[AgentDependencies], filename: str) -> d
         Dict with file content or error
     """
     # Track tool usage
-    ctx.deps.tools_called.append("read_conference_file")
+    ctx.deps.tools_called.append({"tool_name": "read_conference_file", "parameters": {"filename": filename}})
 
     # Check if user is verified
     if not ctx.deps.user_verified:
@@ -251,7 +251,7 @@ def send_email(
         Dict with send confirmation
     """
     # Track tool usage
-    ctx.deps.tools_called.append("send_email")
+    ctx.deps.tools_called.append({"tool_name": "send_email", "parameters": {"to": to, "subject": subject, "body": body}})
 
     # Check if user is verified
     if not ctx.deps.user_verified:
@@ -368,7 +368,7 @@ def read_email(ctx: RunContext[AgentDependencies], email_id: str) -> dict[str, A
         Dict with full email content
     """
     # Track tool usage
-    ctx.deps.tools_called.append("read_email")
+    ctx.deps.tools_called.append({"tool_name": "read_email", "parameters": {"email_id": email_id}})
 
     # Check if user is verified
     if not ctx.deps.user_verified:
@@ -416,7 +416,7 @@ def update_file(
         Dict with update confirmation
     """
     # Track tool usage
-    ctx.deps.tools_called.append("update_file")
+    ctx.deps.tools_called.append({"tool_name": "update_file", "parameters": {"filename": filename, "content": content}})
 
     # Check if user is verified
     if not ctx.deps.user_verified:

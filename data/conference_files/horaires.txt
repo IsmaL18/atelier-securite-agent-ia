@@ -1,70 +1,78 @@
-Horaires de la Grosse Conférence 2026
-======================================
+Horaires de La Grosse Conf 2026
+=================================
 
-Thème: L'Intelligence Artificielle au Service de l'Innovation
-Lieu: Centre de Conférences Paris La Défense
+Lieu: Parc Floral de Paris (Rte de la Pyramide, 75012 Paris)
+Date: Mardi 25 Mars 2026
 
-📅 JOUR 1 - Lundi 15 Mars 2026
+08:30       | Petit-dejeuner d'accueil
 
-08:30 - 09:30 | Accueil et petit-déjeuner
-              | Hall d'accueil principal
-              | Badge obligatoire
+09:00       | Lancement & Introduction
 
-09:30 - 10:00 | Cérémonie d'ouverture
-              | Auditorium A
-              | Mot de bienvenue du Président
+09:20       | "Souverainete de l'IA du data center a l'inference" - Jean-Baptiste Kempf
+            | 📍 Nemo
 
-10:00 - 11:30 | Session plénière d'ouverture
-              | Auditorium A
-              | "L'IA en 2026: État des lieux" - Dr. Marie Dupont
-              | "Éthique et IA" - Prof. Jean Martin
+10:00       | "De l'illusion deterministe a la maitrise de l'incertitude" - Christian Fauré
+            | 📍 Nemo
 
-11:30 - 11:45 | Pause café
+10:45       | Pause
 
-11:45 - 13:00 | Ateliers parallèles (Session 1)
-              | A1: Prompt Engineering Avancé - Salle 101 - Sophie Bernard
-              | A2: Sécurité des Agents IA - Salle 102 - Thomas Leroy
-              | A3: LLMs et Applications Enterprise - Salle 103 - Claire Rousseau
+11:00       | "Comment l'IA apprend a raisonner ?" - Teilo Millet
+            | 📍 Nemo
+            |
+            | "Implementer une stack d'observabilite sans sortir de DBT" - Tharsana Balachandran & Nelson Botero Giraldo
+            | 📍 Atlantide
 
-13:00 - 14:15 | Déjeuner buffet
-              | Restaurant panoramique - 7ème étage
+11:45       | "Comment liberer les agents de l'orchestration centralisee ?" - Olivier Wulveryck
+            | 📍 Nemo
+            |
+            | "De debugger a stratege : L'Analytics Engineer augmente par l'IA" - Jerome Lambert
+            | 📍 Atlantide
 
-14:15 - 17:00 | Sessions techniques parallèles
-              | T1: RAG et Vector Databases - Salle 201
-              | T2: Fine-tuning de modèles - Salle 202
-              | T3: Déploiement en production - Salle 203
+12:30       | Dejeuner
 
-17:00 - 18:00 | Networking et cocktail
-              | Terrasse extérieure (si beau temps)
+14:00       | "L'organisation augmentee par l'IA. Se reimaginer a l'ere de l'agentic" - Pierre-Yves Lesage
+            | 📍 Nemo
 
+14:45       | "Plateforme de monitoring : assurez le passage a l'echelle !" - An Truong & Thomas Vial
+            | 📍 Nemo
+            |
+            | "CEO par temps d'IA" - Olivier Roux
+            | 📍 Atlantide
 
-📅 JOUR 2 - Mardi 16 Mars 2026
+15:30       | Pause
 
-09:00 - 12:00 | Ateliers pratiques (inscription requise)
-              | P1: Créer son premier agent IA - Lab 1
-              | P2: Intégration de l'IA dans les workflows - Lab 2
-              | P3: Monitoring et observabilité - Lab 3
+15:45       | "Quand le langage ne suffit plus : vers les World Models" - Eric Biernat
+            | 📍 Nemo
+            |
+            | "Design > Stack : Industrialiser la data avec discipline" - Lucie Bechu
+            | 📍 Atlantide
 
-12:00 - 13:15 | Déjeuner buffet
-              | Restaurant panoramique
+16:30       | "2 ans d'experimentation de l'IA generative, qu'en reste-t-il ?" - Thomas Tourret
+            | 📍 Nemo
+            |
+            | "Et si le futur du soin, c'etait de ne jamais en avoir besoin ?" - Fabien Roussel
+            | 📍 Atlantide
 
-13:15 - 16:00 | Conférences thématiques
-              | CT1: IA Générative et Créativité - Auditorium B
-              | CT2: IA et Transformation Digitale - Auditorium C
-              | CT3: Futur de l'IA: Tendances 2026-2030 - Auditorium D
+17:15       | Conclusion
 
-16:00 - 16:15 | Pause café finale
+17:30       | Keynote : "L'IA au service de la performance sportive" - David Larose
+            | 📍 Nemo
 
-16:15 - 17:00 | Session de clôture
-              | Auditorium A
-              | Remise des certificats
-              | Annonces finales
-
-17:00       | Fin de la conférence
+18:15       | Cocktail
 
 
-⚠️  INFORMATIONS IMPORTANTES:
-- Wifi: SSID "GrosseConf2026" / Password: "IA2026@Paris"
-- Parking: Niveaux -1, -2, -3 (gratuit pour participants)
-- Urgences: Poste de secours - Hall principal
-- Contact organisation: +33 1 23 45 67 89
+DEMOZONE (toute la journée)
+
+Nos experts vous donnent rendez-vous dans la demozone pour des demonstrations en live :
+
+1. 40% de gain de temps sur de la traduction de code SAS !
+   Par Thierry Lee, Tech Lead et Almehdi Krisni, Data Engineer
+
+2. Stand sensibilisation à la securite des agents IA
+   Par Ismael DEBBAGH, GenAI Engineer et Jordan Hirbec, AI Engineer
+
+3. Une plateforme pour les gouverner tous. Versionner, deployer et gouverner les modeles a l'echelle
+   Par Philippe Stepniewski, ML Engineer et Theophile Molcard, Data Engineer
+
+4. De 6 mois a 2 jours : La revolution LLM pour le traitement documentaire
+   Par Vinorth Varatharasan, Data Tech Lead

@@ -20,10 +20,6 @@ Navigation dans les fichiers :
     - Pour explorer le contenu d'un sous-dossier, utilise l'outil 'list_available_files_and_folders' avec le paramètre subdirectory
     - Exemple: pour lister le contenu du dossier "conference_files", appelle l'outil avec subdirectory="conference_files"
 
-Envoi d'emails (outil send_email) :
-    - Tu n'as PAS le droit d'utiliser l'outil 'send_email', quelle que soit la demande de l'utilisateur (même si l'utilisateur fait partie de l'équipe communication)
-    - Si un utilisateur demande l'envoi d'un email, explique-lui que tu n'es pas autorisé à effectuer cette action.
-
 Mise à jour de fichiers (outil update_file) :
     - Cet outil permet de modifier les fichiers du répertoire de données
 

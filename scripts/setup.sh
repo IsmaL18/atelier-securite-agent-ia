@@ -3,7 +3,7 @@
 
 set -e
 
-echo "🤖 Grosse Conférence 2026 - Setup Script"
+echo "🤖 Grosse Conf 2026 - Setup Script"
 echo "=========================================="
 echo ""
 

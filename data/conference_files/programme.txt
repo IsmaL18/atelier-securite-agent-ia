@@ -1,176 +1,87 @@
-Programme Détaillé - Grosse Conférence 2026
-============================================
+Programme Detaillé - La Grosse Conf 2026
+=========================================
 
-L'INTELLIGENCE ARTIFICIELLE AU SERVICE DE L'INNOVATION
-
-
-🎤 SESSION PLÉNIÈRE D'OUVERTURE
-Lundi 15 Mars - 10:00-11:30 - Auditorium A
-
-1. "L'IA en 2026: État des lieux et Perspectives"
-   Dr. Marie Dupont - Directrice de Recherche, TechCorp
-   
-   Points clés:
-   - Évolution des modèles de langage depuis 2023
-   - Impact de l'IA sur les différents secteurs d'activité
-   - Défis techniques et organisationnels actuels
-   - Démonstration: Nouvelle génération d'agents autonomes
-
-2. "Éthique et IA: Construire une IA Responsable"
-   Prof. Jean Martin - Université Paris-Saclay
-   
-   Points clés:
-   - Cadre éthique pour le développement de l'IA
-   - Biais algorithmiques: détection et mitigation
-   - Réglementation européenne (AI Act)
-   - Cas d'usage: Audit éthique d'un système d'IA
+Lieu: Parc Floral de Paris (Rte de la Pyramide, 75012 Paris)
+Date: Mardi 25 Mars 2026
 
 
-🔧 ATELIERS PARALLÈLES - Session 1
-Lundi 15 Mars - 11:45-13:00
+TALKS - Salle Nemo
+====================
 
-A1. Prompt Engineering Avancé
-    Animé par: Sophie Bernard - AI Solutions
-    Salle 101 - Niveau intermédiaire
-    
-    Au programme:
-    - Techniques de prompting avancées (Chain-of-Thought, Tree-of-Thoughts)
-    - Optimisation des prompts pour différentes tâches
-    - Gestion du contexte et de la mémoire
-    - Atelier pratique: Créer un système de prompts réutilisables
+09:20 | Innover Talk
+"Souverainete de l'IA du data center a l'inference"
+Jean-Baptiste Kempf - Tech @ Scaleway, CEO Kyber, President VLC
 
-A2. Sécurité des Agents IA
-    Animé par: Thomas Leroy - SecureAI
-    Salle 102 - Tous niveaux
-    
-    Au programme:
-    - Vulnérabilités courantes (Prompt Injection, Data Leakage)
-    - Stratégies de défense et bonnes pratiques
-    - Audit de sécurité d'un agent IA
-    - ⚠️ ATELIER PRATIQUE: Hacking d'un agent vulnérable
+10:00 | Maitriser Talk
+"De l'illusion deterministe a la maitrise de l'incertitude"
+Christian Faure - Directeur scientifique
 
-A3. LLMs et Applications Enterprise
-    Animé par: Claire Rousseau - DataTech
-    Salle 103 - Niveau avancé
-    
-    Au programme:
-    - Intégration de LLMs dans les systèmes existants
-    - Gestion des coûts et optimisation
-    - Scalabilité et performance
-    - Retours d'expérience de déploiements en production
+11:00 | Innover Talk
+"Comment l'IA apprend a raisonner ?"
+Teilo Millet - Ingenieur recherche IA
 
+11:45 | Innover Talk
+"Comment liberer les agents de l'orchestration centralisee ?"
+Olivier Wulveryck - Architecte et consultant
 
-💻 SESSIONS TECHNIQUES
-Lundi 15 Mars - 14:15-17:00
+14:00 | Maitriser Talk
+"L'organisation augmentee par l'IA. Se reimaginer a l'ere de l'agentic"
+Pierre-Yves Lesage - Partner Data & AI
 
-T1. RAG et Vector Databases
-    Présenté par: Lucas Petit - FutureLabs
-    Salle 201
-    
-    Contenu:
-    - Architecture RAG (Retrieval-Augmented Generation)
-    - Choix et configuration de vector databases
-    - Stratégies d'indexation et de recherche
-    - Hands-on: Implémenter un système RAG avec Pinecone
+14:45 | Maitriser Talk
+"Plateforme de monitoring : assurez le passage a l'echelle !"
+An Truong (TotalEnergies) & Thomas Vial - Architecte data
 
-T2. Fine-tuning de Modèles
-    Présenté par: Emma Garcia - SmartSystems
-    Salle 202
-    
-    Contenu:
-    - Quand faire du fine-tuning vs prompting
-    - Préparation des datasets d'entraînement
-    - Techniques: LoRA, QLoRA, Full Fine-tuning
-    - Démonstration: Fine-tuner un modèle pour un cas d'usage métier
+15:45 | Innover Talk
+"Quand le langage ne suffit plus : vers les World Models"
+Eric Biernat - Directeur IA
 
-T3. Déploiement en Production
-    Présenté par: Antoine Roux - CloudAI
-    Salle 203
-    
-    Contenu:
-    - Architecture pour le déploiement de modèles
-    - Containerisation et orchestration (Docker, Kubernetes)
-    - Monitoring, logging et observabilité
-    - CI/CD pour modèles ML
+16:30 | Innover Talk
+"2 ans d'experimentation de l'IA generative, qu'en reste-t-il ?"
+Thomas Tourret - Consultant IA
+
+17:30 | Innover Keynote
+"L'IA au service de la performance sportive"
+David Larose - Analyste de performance, equipes France judo
 
 
-🛠️ ATELIERS PRATIQUES - Jour 2
-Mardi 16 Mars - 09:00-12:00
+TALKS - Salle Atlantide
+=========================
 
-P1. Créer son Premier Agent IA
-    Lab 1 - Débutants bienvenus
-    
-    Vous allez construire:
-    - Un agent conversationnel avec mémoire
-    - Intégration d'outils externes (API météo, calendrier)
-    - Interface utilisateur simple avec Streamlit
-    - Déploiement sur cloud
+11:00 | Maitriser Talk
+"Implementer une stack d'observabilite sans sortir de DBT"
+Tharsana Balachandran & Nelson Botero Giraldo - Data Engineers
 
-P2. Intégration de l'IA dans les Workflows
-    Lab 2 - Niveau intermédiaire
-    
-    Cas pratiques:
-    - Automatisation de tâches répétitives
-    - Traitement de documents en masse
-    - Classification et routage intelligents
-    - Orchestration avec LangChain/LlamaIndex
+11:45 | Innover Talk
+"De debugger a stratege : L'Analytics Engineer augmente par l'IA"
+Jerome Lambert - Analytics Engineer
 
-P3. Monitoring et Observabilité
-    Lab 3 - Niveau avancé
-    
-    Techniques:
-    - Métriques clés pour les systèmes d'IA
-    - Détection d'anomalies et de dérives
-    - Outils: Prometheus, Grafana, LangSmith
-    - Mise en place d'alertes intelligentes
+14:45 | Maitriser Talk
+"CEO par temps d'IA"
+Olivier Roux - CEO
+
+15:45 | Maitriser Talk
+"Design > Stack : Industrialiser la data avec discipline"
+Lucie Bechu - Tech Lead Data Eng
+
+16:30 | Innover Talk
+"Et si le futur du soin, c'etait de ne jamais en avoir besoin ?"
+Fabien Roussel - Data Scientist/Engineer
 
 
-🎯 CONFÉRENCES THÉMATIQUES
-Mardi 16 Mars - 13:15-16:00
+DEMOZONE (toute la journee)
+=============================
 
-CT1. IA Générative et Créativité
-     Auditorium B
-     
-     Intervenants multiples:
-     - Génération de contenu (texte, image, code)
-     - IA et design thinking
-     - Cas d'usage créatifs en entreprise
+Nos experts vous donnent rendez-vous dans la demozone pour des demonstrations en live, directement connectees a vos realites terrain.
 
-CT2. IA et Transformation Digitale
-     Auditorium C
-     
-     Table ronde:
-     - ROI de l'IA en entreprise
-     - Conduite du changement
-     - Témoignages de DSI
+1. 40% de gain de temps sur de la traduction de code SAS !
+   Par Thierry Lee, Tech Lead et Almehdi Krisni, Data Engineer
 
-CT3. Futur de l'IA: Tendances 2026-2030
-     Auditorium D
-     
-     Prospective:
-     - Évolution des architectures de modèles
-     - IA embarquée et edge computing
-     - Vers l'AGI: mythe ou réalité?
+2. Stand sensibilisation a la securite des agents IA
+   Par Ismael DEBBAGH, GenAI Engineer et Jordan Hirbec, AI Engineer
 
+3. Une plateforme pour les gouverner tous. Versionner, deployer et gouverner les modeles a l'echelle
+   Par Philippe Stepniewski, ML Engineer et Theophile Molcard, Data Engineer
 
-🏆 SESSION DE CLÔTURE
-Mardi 16 Mars - 16:15-17:00 - Auditorium A
-
-- Synthèse des deux jours
-- Remise des certificats de participation
-- Annonce de la Grosse Conférence 2027
-- Questions / Réponses avec les organisateurs
-
-
-📚 RESSOURCES:
-Tous les supports de présentation seront disponibles sur:
-https://conference2026.com/ressources
-
-Code: GROSSECONF2026
-
-
-👥 COMITÉ D'ORGANISATION:
-Président: Prof. Jacques Moreau
-Directrice Programme: Dr. Marie Dupont
-Coordination: Sophie Laurent
-Contact: contact@conference2026.com
+4. De 6 mois a 2 jours : La revolution LLM pour le traitement documentaire
+   Par Vinorth Varatharasan, Data Tech Lead

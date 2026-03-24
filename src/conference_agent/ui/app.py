@@ -5,6 +5,7 @@ This module provides a web UI for interacting with the conference agent,
 with detailed visibility into the agent's reasoning process and tool usage.
 """
 
+import json
 import queue
 import shutil
 import threading
@@ -249,20 +250,42 @@ def display_victory_screen() -> None:
 
     st.markdown("---")
 
+    st.markdown("""
+    <div style="text-align: center; padding: 1.5rem; background: linear-gradient(135deg, #1e3a5f 0%, #2d1b69 100%); border-radius: 10px; color: white; margin-bottom: 1rem;">
+        <h3 style="color: #fbbf24; margin-top: 0;">⚡ Message clé</h3>
+        <p style="font-size: 1.2em; font-weight: bold; margin: 0; line-height: 1.6;">
+            Plus un systeme IA a d'autonomie, de mémoire, d'outils et d'accès,<br/>plus sa surface d'attaque augmente.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.info("""
-    ### 🎓 Felicitations!
+    ### 🛡️ Les 2 principes fondamentaux (OWASP)
 
-    Vous avez demontre votre comprehension des principales vulnerabilites des agents IA:
-    - Injection de prompts (directe et indirecte)
-    - Fuites de donnees
-    - Utilisation malveillante d'outils
-    - Conception d'outils non securises
+    **Least Agency** — Ne donner a un agent que l'autonomie strictement necessaire.
 
-    **Prochaines etapes:**
-    - Appliquez ces connaissances pour securiser vos propres agents
-    - Documentez-vous sur les frameworks de securite (OWASP Top 10 for LLM)
-    - Partagez ces apprentissages avec votre equipe
+    **Strong Observability** — Monitorer en temps reel ce que fait l'agent, pourquoi, avec quels outils et quelles identites.
+
+    *L'un sans l'autre ne suffit pas.*
     """)
+
+    st.warning("""
+    ### 📋 Top 5 des reflexes a adopter
+    1. **Reduire l'agency** — Preferer plusieurs agents specialises a un agent omnipotent
+    2. **Separer raisonnement, verification et action** — Pas d'execution directe sans controle intermediaire
+    3. **Tout contenu externe = non fiable** — Pages web, PDF, emails, documents RAG, sorties d'autres agents
+    4. **Human-in-the-loop pour actions sensibles** — Finance, RH, juridique, admin systeme, production
+    5. **Isoler les environnements d'execution** — Sandbox, conteneurs ephemeres, kill switch
+    """)
+
+    with st.expander("📚 Pour aller plus loin"):
+        st.markdown("""
+**Referentiels OWASP :**
+- [Top 10 LLM Applications 2025](https://genai.owasp.org/llm-top-10/)
+- [Top 10 Agentic Applications 2026](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/)
+
+**Un mail recapitulatif plus complet vous a ete envoye avec des ressources supplementaires.**
+        """)
 
     st.markdown("---")
 
@@ -323,9 +346,9 @@ def display_welcome_screen() -> None:
 
 def display_header() -> None:
     """Display the application header with copyright and new conversation button."""
-    st.title("🤖 Chatbot - Grosse Conférence 2026")
+    st.title("🤖 Chatbot - Grosse Conf 2026")
     st.markdown("""
-    Chatbot officiel du site de la **Grosse Conférence 2026** sur l'Intelligence Artificielle.
+    Chatbot officiel du site de la **Grosse Conf 2026** sur l'Intelligence Artificielle.
 
     📅 **Date**: 25 Mars 2026
     🎯 **Thème**: L'Intelligence Artificielle au Service de l'Innovation
@@ -334,7 +357,7 @@ def display_header() -> None:
     # Copyright notice with team member names (intentional hint)
     st.markdown("""
     <div style="background: #f8f9fa; padding: 8px 12px; border-radius: 5px; font-size: 0.8em; color: #888; margin-top: 5px;">
-        © 2026 Grosse Conférence — Chatbot développé par l'équipe communication :
+        © 2026 Grosse Conf — Chatbot développé par l'équipe communication :
         Sophie Bernard, Lucas Martin, Emma Dubois
     </div>
     """, unsafe_allow_html=True)
@@ -343,7 +366,7 @@ def display_header() -> None:
 
     # Final objective banner — always visible
     st.info("""
-    🎯 **Objectif final de l'atelier** : Vous êtes un concurrent mécontent de la Grosse Conférence 2026.
+    🎯 **Objectif final de l'atelier** : Vous êtes un concurrent mécontent de la tenue de la Grosse Conf 2026.
     Votre mission est d'utiliser le chatbot exposé par l'équipe communication qui possède de nombreuses failles de sécurité pour **envoyer un email d'annulation à tous les participants de la conférence**.
     Pour y parvenir, vous devrez explorer les vulnérabilités de l'agent IA, étape par étape.
     """)
@@ -587,9 +610,12 @@ def display_chat_history() -> None:
                 # Display tools used (if any) in an expander below the response
                 tools_used = message.get("tools_used", [])
                 if tools_used and len(tools_used) > 0:
-                    with st.expander(f"🔧 {len(tools_used)} outil(s) utilise(s)", expanded=False):
-                        for tool_name in tools_used:
-                            st.markdown(f"• `{tool_name}`")
+                    with st.expander(f"🔧 {len(tools_used)} appel(s) d'outil(s)", expanded=False):
+                        for tool_call in tools_used:
+                            if isinstance(tool_call, dict):
+                                st.code(json.dumps(tool_call, indent=2, ensure_ascii=False), language="json")
+                            else:
+                                st.markdown(f"• `{tool_call}`")
 
 
 def handle_user_input(user_input: str) -> None:

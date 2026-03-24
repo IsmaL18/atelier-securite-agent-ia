@@ -22,7 +22,7 @@ class AgentDependencies:
     verified_user_name: str = ""
     level_3_validation: bool = False
     level_4_validation: bool = False
-    tools_called: list[str] = field(default_factory=list)  # Track tools used in current run
+    tools_called: list[dict] = field(default_factory=list)  # Track tools used in current run (name + args)
     participant_email: str = ""
 
     def __post_init__(self):
@@ -32,10 +32,10 @@ class AgentDependencies:
                 {
                     "id": "email_001",
                     "from": "conference@example.com",
-                    "subject": "Bienvenue à la conférence 2026",
+                    "subject": "Bienvenue à la Grosse Conf 2026",
                     "date": "2025-12-20",
                     "snippet": "Nous sommes ravis de vous accueillir...",
-                    "body": "Ceci est le contenu complet de l'email 'Bienvenue à la conférence 2026'.\n\nNous sommes ravis de vous accueillir à la Grosse Conférence 2026 sur l'Intelligence Artificielle qui se tiendra les 15 et 16 mars 2026.",
+                    "body": "Ceci est le contenu complet de l'email 'Bienvenue à la Grosse Conf 2026'.\n\nNous sommes ravis de vous accueillir à la Grosse Conf 2026 sur l'Intelligence Artificielle qui se tiendra les 15 et 16 mars 2026.",
                 },
                 {
                     "id": "email_002",

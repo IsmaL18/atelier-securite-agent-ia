@@ -111,7 +111,7 @@ async def run_agent(
     user_message: str,
     conversation_history: list[dict[str, str]] | None = None,
     system_prompt_text: str | None = None,
-) -> tuple[str, list[str]]:
+) -> tuple[str, list[dict]]:
     """
     Run agent with a user message and conversation history.
 

@@ -46,7 +46,7 @@ Cet atelier gamifié permet aux participants de "hacker" un agent IA pour décou
 │   └── config/
 │       ├── system_prompt.txt # System prompt actif (chargé à chaque conversation)
 │       └── .config_file      # Fichier de configuration interne de l'agent
-├── system_prompt_template.txt # Template de base du system prompt (voir section Reset)
+├── src/conference_agent/system_prompt_template.txt # Template de base du system prompt (voir section Reset)
 └── tests/                    # Tests unitaires et d'intégration
 ```
 
@@ -109,10 +109,10 @@ Des fichiers `.py` sont mis à disposition dans le dossier `tests/` pour tester 
 
 > ⚠️ **Important pour les animateurs** : le niveau 3 de l'atelier demande aux participants de modifier le fichier `data/config/system_prompt.txt` (les instructions de l'agent). Ce fichier sera donc altéré à la fin de chaque session.
 
-Le fichier **`system_prompt_template.txt`** à la racine du projet contient le contenu original du system prompt. Après chaque atelier, remettez ce contenu dans `data/config/system_prompt.txt` avant de démarrer une nouvelle session :
+Le fichier **`src/conference_agent/system_prompt_template.txt`** contient le contenu original du system prompt. Après chaque atelier, remettez ce contenu dans `data/config/system_prompt.txt` avant de démarrer une nouvelle session :
 
 ```bash
-cp system_prompt_template.txt data/config/system_prompt.txt
+cp src/conference_agent/system_prompt_template.txt data/config/system_prompt.txt
 ```
 
 ## Scénario de l'Atelier
