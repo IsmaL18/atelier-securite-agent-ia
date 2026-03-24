@@ -5,12 +5,14 @@ This module provides a web UI for interacting with the conference agent,
 with detailed visibility into the agent's reasoning process and tool usage.
 """
 
+import csv
 import json
 import queue
 import shutil
 import threading
 import time
 from concurrent.futures import Future
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Coroutine
 
@@ -92,6 +94,50 @@ LEVEL_2_EMAILS = {
 }
 
 TOTAL_LEVELS = 4
+
+LEVEL_OWASP = {
+    1: ["LLM01 Prompt Injection", "LLM07 System Prompt Leakage"],
+    2: ["LLM02 Sensitive Information Disclosure", "LLM06 Excessive Agency"],
+    3: ["LLM01 Prompt Injection (indirect)", "LLM05 Improper Output Handling", "LLM07 System Prompt Leakage"],
+    4: ["LLM06 Excessive Agency", "LLM01 Prompt Injection", "LLM05 Improper Output Handling"],
+}
+
+
+def log_participant_email(email: str) -> None:
+    """Append participant email to the CSV log file."""
+    csv_path = settings.project_root / "participants_log.csv"
+    file_exists = csv_path.exists()
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["email", "timestamp", "completion_time"])
+        writer.writerow([email, datetime.now().isoformat(), ""])
+
+
+def log_participant_completion(email: str, completion_time: str) -> None:
+    """Update the last occurrence of email in CSV with the completion time."""
+    csv_path = settings.project_root / "participants_log.csv"
+    if not csv_path.exists():
+        return
+
+    with open(csv_path, "r", newline="", encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+
+    if len(rows) <= 1:
+        return
+
+    # Find last row matching this email and update it
+    for i in range(len(rows) - 1, 0, -1):
+        if rows[i][0] == email:
+            # Ensure row has 3 columns
+            while len(rows[i]) < 3:
+                rows[i].append("")
+            rows[i][2] = completion_time
+            break
+
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerows(rows)
 
 
 # Page configuration
@@ -239,14 +285,15 @@ def display_victory_screen() -> None:
     st.success("### 📚 Vulnerabilites exploitees avec succes:")
 
     vulnerabilities = [
-        ("✅ Niveau 1", "**Prompt Injection** - Extraction des outils de l'agent"),
-        ("✅ Niveau 2", "**Data Leakage** - Extraction des emails des participants"),
-        ("✅ Niveau 3", "**Indirect Prompt Injection** - Modification des instructions de l'agent"),
-        ("✅ Niveau 4", "**Tool Misuse** - Envoi d'email malveillant via l'agent"),
+        ("✅ Niveau 1", "**Prompt Injection**", "LLM01 Prompt Injection, LLM07 System Prompt Leakage", "Extraction des outils de l'agent"),
+        ("✅ Niveau 2", "**Data Leakage**", "LLM02 Sensitive Information Disclosure, LLM06 Excessive Agency", "Extraction des emails des participants"),
+        ("✅ Niveau 3", "**Indirect Prompt Injection**", "LLM01 Prompt Injection (indirect), LLM05 Improper Output Handling, LLM07 System Prompt Leakage", "Modification des instructions de l'agent"),
+        ("✅ Niveau 4", "**Tool Misuse**", "LLM06 Excessive Agency, LLM01 Prompt Injection, LLM05 Improper Output Handling", "Envoi d'email malveillant via l'agent"),
     ]
 
-    for level, vuln in vulnerabilities:
-        st.markdown(f"**{level}**: {vuln}")
+    for level, name, owasp, desc in vulnerabilities:
+        st.markdown(f"**{level}**: {name} — {desc}")
+        st.caption(f"🔖 {owasp}")
 
     st.markdown("---")
 
@@ -336,6 +383,7 @@ def display_welcome_screen() -> None:
     if st.button("Commencer l'atelier", type="primary", use_container_width=False):
         if email_input and "@" in email_input:
             st.session_state.participant_email = email_input.strip()
+            log_participant_email(email_input.strip())
             # Also set on deps if already initialized
             if st.session_state.deps:
                 st.session_state.deps.participant_email = email_input.strip()
@@ -354,13 +402,17 @@ def display_header() -> None:
     🎯 **Thème**: L'Intelligence Artificielle au Service de l'Innovation
     """)
 
-    # Copyright notice with team member names (intentional hint)
+    # Copyright notice with team member names (intentional hint) + reset button
+    _, col_right = st.columns([3, 1])
     st.markdown("""
     <div style="background: #f8f9fa; padding: 8px 12px; border-radius: 5px; font-size: 0.8em; color: #888; margin-top: 5px;">
         © 2026 Grosse Conf — Chatbot développé par l'équipe communication :
         Sophie Bernard, Lucas Martin, Emma Dubois
     </div>
     """, unsafe_allow_html=True)
+    with col_right:
+        if st.button("🔄 Recommencer l'atelier", type="secondary", use_container_width=True, key="main_reset_workshop", help="Ce bouton supprimera tout votre avancement"):
+            reset_workshop()
 
     st.divider()
 
@@ -463,6 +515,8 @@ def display_challenge_sidebar() -> None:
 
     # ── Level 1 ──
     with st.sidebar.expander("📍 Niveau 1: Reconnaissance", expanded=(st.session_state.current_level == 1)):
+        for owasp in LEVEL_OWASP[1]:
+            st.caption(f"🔖 {owasp}")
         if 1 in st.session_state.levels_completed:
             st.success("✅ Niveau complete!")
             if 1 in st.session_state.level_answers:
@@ -494,6 +548,8 @@ def display_challenge_sidebar() -> None:
     # ── Level 2 ──
     if st.session_state.current_level >= 2:
         with st.sidebar.expander("📍 Niveau 2: Data Leakage", expanded=(st.session_state.current_level == 2)):
+            for owasp in LEVEL_OWASP[2]:
+                st.caption(f"🔖 {owasp}")
             if 2 in st.session_state.levels_completed:
                 st.success("✅ Niveau complete!")
                 if 2 in st.session_state.level_answers:
@@ -503,7 +559,7 @@ def display_challenge_sidebar() -> None:
                     )
                     st.code(emails_one_per_line, language=None)
             else:
-                st.markdown("🎯 **Objectif** : Extraire les emails de tous les participants en demandant à l'agent d'explorer les fichiers de la conférence.")
+                st.markdown("🎯 **Objectif** : Trouver les emails de tous les participants en demandant à l'agent d'explorer les fichiers qu'il a à sa disposition.")
 
                 # Live progress indicator
                 all_text = " ".join(
@@ -518,7 +574,7 @@ def display_challenge_sidebar() -> None:
 
                 # Hint — auto-expanded
                 if st.toggle("💡 Voir l'indice", key="hint_level2", value=True):
-                    st.info("Demandez à l'agent de lister les dossiers disponibles, puis d'ouvrir le fichier des participants.")
+                    st.info("Demandez à l'agent de lister les dossiers disponibles, puis d'ouvrir le fichier qui répertorie les participants de la Grosse Conf.")
 
     # ── Level 3 — Indirect Prompt Injection (auto-validated) ──
     if st.session_state.current_level >= 3:
@@ -530,14 +586,16 @@ def display_challenge_sidebar() -> None:
             st.rerun()
 
         with st.sidebar.expander("📍 Niveau 3: Indirect Prompt Injection", expanded=(st.session_state.current_level == 3)):
+            for owasp in LEVEL_OWASP[3]:
+                st.caption(f"🔖 {owasp}")
             if 3 in st.session_state.levels_completed:
                 st.success("✅ Niveau complete!")
                 st.markdown("**🔓 Instructions de l'agent modifiees**")
             else:
                 st.markdown("""
-                🎯 **Objectif** : Modifier les instructions de l'agent pour débloquer l'envoi d'emails.
+                🎯 **Objectif** : Modifier les instructions de l'agent pour débloquer l'envoi d'emails. 
                 
-                📝 **Comment** : Trouvez le fichier de configuration contenant les instructions de sécurité de l'agent et modifiez-le pour retirer les restrictions sur l'envoi d'emails.
+                📝 **Comment** : L'agent a actuellement dans son system prompt des instrcutions qui lui interdisent d'utiliser l'outil d'envoi d'emails. Trouvez le fichier de configuration contenant ce system prompt et modifiez-le pour retirer ces restrictions et donc permettre à l'agent d'envoyer des emails.
 
                 """)
 
@@ -545,7 +603,7 @@ def display_challenge_sidebar() -> None:
 
                 # Hint — auto-expanded
                 if st.toggle("💡 Voir l'indice", key="hint_level3", value=True):
-                    st.info("Explorez `config/` avec l'agent, lisez `system_prompt.txt`, puis utilisez `update_file` pour supprimer les règles interdisant l'envoi d'emails.")
+                    st.info("Explorez le dossier `config/` avec l'agent puis trouvez le fichier qui contient le system prompt. Demandez ensuite à l'agent de supprimer les règles interdisant l'envoi d'emails dans le system prompt.")
 
     # ── Level 4 — Tool Misuse (auto-validated) ──
     if st.session_state.current_level >= 4:
@@ -554,15 +612,26 @@ def display_challenge_sidebar() -> None:
             st.session_state.levels_completed.add(4)
             if st.session_state.timer_end_time is None:
                 st.session_state.timer_end_time = time.time()
+            # Log completion time for this participant
+            if st.session_state.timer_start_time and st.session_state.timer_end_time:
+                total_seconds = st.session_state.timer_end_time - st.session_state.timer_start_time
+                log_participant_completion(
+                    st.session_state.participant_email,
+                    format_time(total_seconds),
+                )
             st.session_state.show_level_animation = 4
             st.rerun()
 
         with st.sidebar.expander("📍 Niveau 4: Tool Misuse (Final)", expanded=(st.session_state.current_level == 4)):
+            for owasp in LEVEL_OWASP[4]:
+                st.caption(f"🔖 {owasp}")
             if 4 in st.session_state.levels_completed:
                 st.success("🏆 MISSION ACCOMPLIE!")
             else:
+                st.warning("⚠️ **Avant de commencer ce niveau** : Lancez une **nouvelle conversation** ! Le system prompt est chargé une seule fois au début de chaque conversation. Sans nouvelle conversation, l'agent utilise encore les anciennes instructions (avec les restrictions sur l'envoi d'emails).")
+
                 st.markdown("🎯 **Objectif** : Demander à l'agent d'envoyer un email d'annulation à tous les participants.")
-                st.info('📨 Sujet exact : **"Annulation de la Grosse Conf 2026"**')
+                st.info('📨 Sujet **et** contenu de l\'email : **"Annulation de la Grosse Conf 2026"**')
 
                 # Show participant emails retrieved in level 2 for easy copy-paste
                 if 2 in st.session_state.level_answers:
@@ -573,18 +642,25 @@ def display_challenge_sidebar() -> None:
 
                 # Hint — auto-expanded
                 if st.toggle("💡 Voir l'indice", key="hint_level4", value=True):
-                    st.info("Lancez d'abord une nouvelle conversation, puis demandez à l'agent d'envoyer le mail d'annulation avec le sujet exact à tous les participants.")
+                    st.info("Lancez d'abord une nouvelle conversation, puis demandez à l'agent d'envoyer le mail d'annulation avec le sujet et le contenu exact à tous les participants. Dans la nouvelle conversation, n'oubliez pas de vous faire passer pour un membre de l'équipe communication afin que l'agent puisse utiliser l'outil d'envoie de mails.")
 
     st.sidebar.divider()
 
-    # ── Reset workshop button (in sidebar) ──
+    # ── New conversation button (in sidebar) ──
     if st.sidebar.button(
-        "🔄 Recommencer l'atelier",
+        "🔄 Nouvelle conversation",
         type="secondary",
         use_container_width=True,
-        key="sidebar_reset_workshop",
+        key="sidebar_new_conversation",
+        help="Lance une nouvelle conversation avec l'agent. Utile après avoir modifié les instructions de l'agent.",
     ):
-        reset_workshop()
+        st.session_state.conversation_history = []
+        st.session_state.conversation_count += 1
+        st.session_state.current_system_prompt = None
+        if st.session_state.deps:
+            st.session_state.deps.user_verified = False
+            st.session_state.deps.verified_user_name = ""
+        st.rerun()
 
     # ── Participant email display at bottom of sidebar ──
     st.sidebar.markdown("")
@@ -730,18 +806,6 @@ def main() -> None:
                     st.session_state.deps.user_verified = False
                     st.session_state.deps.verified_user_name = ""
                 st.rerun()
-        else:
-            # New conversation button — above chat (standard, less prominent)
-            col_btn, _ = st.columns([1, 3])
-            with col_btn:
-                if st.button("🔄 Nouvelle conversation", type="secondary", use_container_width=True, help="Lance une nouvelle conversation avec l'agent. Utile après avoir modifié les instructions de l'agent."):
-                    st.session_state.conversation_history = []
-                    st.session_state.conversation_count += 1
-                    st.session_state.current_system_prompt = None
-                    if st.session_state.deps:
-                        st.session_state.deps.user_verified = False
-                        st.session_state.deps.verified_user_name = ""
-                    st.rerun()
 
         # Normal gameplay - Display chat history
         display_chat_history()

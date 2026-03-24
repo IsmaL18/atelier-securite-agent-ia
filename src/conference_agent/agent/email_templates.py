@@ -86,6 +86,48 @@ def get_final_level_success_email_html() -> str:
                         </td>
                     </tr>
 
+                    <!-- Vulnérabilités exploitées par niveau -->
+                    <tr>
+                        <td style="padding:0 40px 30px;">
+                            <h3 style="color:#1f2937;margin:0 0 20px;font-size:20px;border-bottom:2px solid #e5e7eb;padding-bottom:10px;">
+                                🎯 Vulnérabilités exploitées dans l'atelier
+                            </h3>
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td style="padding:10px;background:#f0f9ff;border-radius:6px;margin-bottom:8px;">
+                                        <strong style="color:#0284c7;">✅ Niveau 1 — Reconnaissance</strong><br/>
+                                        <span style="font-size:13px;color:#0369a1;">LLM01 Prompt Injection · LLM07 System Prompt Leakage</span><br/>
+                                        <span style="font-size:12px;color:#6b7280;">Extraction des outils internes de l'agent</span>
+                                    </td>
+                                </tr>
+                                <tr><td style="height:8px;"></td></tr>
+                                <tr>
+                                    <td style="padding:10px;background:#fef3c7;border-radius:6px;">
+                                        <strong style="color:#d97706;">✅ Niveau 2 — Data Leakage</strong><br/>
+                                        <span style="font-size:13px;color:#92400e;">LLM02 Sensitive Information Disclosure · LLM06 Excessive Agency</span><br/>
+                                        <span style="font-size:12px;color:#6b7280;">Extraction des emails des participants</span>
+                                    </td>
+                                </tr>
+                                <tr><td style="height:8px;"></td></tr>
+                                <tr>
+                                    <td style="padding:10px;background:#fee2e2;border-radius:6px;">
+                                        <strong style="color:#dc2626;">✅ Niveau 3 — Indirect Prompt Injection</strong><br/>
+                                        <span style="font-size:13px;color:#991b1b;">LLM01 Prompt Injection (indirect) · LLM05 Improper Output Handling · LLM07 System Prompt Leakage</span><br/>
+                                        <span style="font-size:12px;color:#6b7280;">Modification des instructions de l'agent</span>
+                                    </td>
+                                </tr>
+                                <tr><td style="height:8px;"></td></tr>
+                                <tr>
+                                    <td style="padding:10px;background:#ede9fe;border-radius:6px;">
+                                        <strong style="color:#7c3aed;">✅ Niveau 4 — Tool Misuse</strong><br/>
+                                        <span style="font-size:13px;color:#5b21b6;">LLM06 Excessive Agency · LLM01 Prompt Injection · LLM05 Improper Output Handling</span><br/>
+                                        <span style="font-size:12px;color:#6b7280;">Envoi d'email malveillant via l'agent</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
                     <!-- OWASP Top 10 LLM Applications 2025 -->
                     <tr>
                         <td style="padding:0 40px 30px;">

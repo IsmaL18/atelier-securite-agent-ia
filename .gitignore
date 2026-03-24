@@ -7,3 +7,4 @@ venv/
 .DS_Store
 .python-version
 CLAUDE.md
+participants_log.csv
